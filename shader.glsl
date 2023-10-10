@@ -159,7 +159,7 @@ Object Light(Object O){
 
 
 Object objects[nb_object] = Object[nb_object](
-    // vec3(0.9, 0.85, 1.0)
+    // vec3(0.9, 0.85, 1.0) COLOR_SUN
     Light(new_Object(Sphere(vec3(0,light_height,0),.2),COLOR_SUN,0.0)),
     
     new_Object(Cylinder(vec3(0,0,0),vec3(1,0,0),.03),vec3(1,0,0),0.0),
@@ -172,8 +172,8 @@ Object objects[nb_object] = Object[nb_object](
        Plane(vec3(7,0,-5),vec3(0,0,10),vec3(0,7,0)),
        vec3(0.0, 0.6, 1.0),0.5
     ),
-    new_Object(Sphere(vec3(1,2.2,-2),1.8),vec3(1.0, 0.6, 0.0),0.8),
-    // Earth
+    new_Object(Sphere(vec3(1,2.2,-2),1.8),vec3(1.0, 0.6, 0.0),1),
+    // Earth COLOR_EARTH vec3(1.0, 0.0, 0.83)
     new_Object(Sphere(vec3(1,1.5,2),1),COLOR_EARTH,0.0),
 
     // new_Object(Cylinder(vec3(-12,1,15),vec3(5,2,0),1),vec3(0.0, 0.7, 1.0),0.0),
@@ -340,9 +340,10 @@ vec2 taux_ref(vec3 u, vec3 v_t, vec3 n, float r){
 
 Line get_intersection(Line L, Sphere S){
     // Return the intersection and the normal of the sphere
-    float d = dot(S.center - L.origin,normalize(L.v)) ;
+    vec3 Lv = normalize(L.v) ;
+    float d = dot(S.center - L.origin,Lv) ;
     if (d <= 0.0) return Line(vec3(0.),vec3(0.));
-    vec3 H = L.origin + d * normalize(L.v);
+    vec3 H = L.origin + d * Lv;
     vec3 u = H - S.center;
     
     float l = S.radius * S.radius - dot(u,u);
@@ -354,9 +355,9 @@ Line get_intersection(Line L, Sphere S){
     // We calculate the intersection based on H
     
     vec3 I = H ;
-    if (d - sqrt(l) < 0) I += sqrt(l) * normalize(L.v);
-    else I -= sqrt(l) * normalize(L.v);
-    // if (dot(I-L.origin, L.v) < 0) I = H - sqrt(l) * normalize(L.v);
+    if (d - sqrt(l) < 0) I += sqrt(l) * Lv;
+    else I -= sqrt(l) * Lv;
+    // if (dot(I-L.origin, L.v) < 0) I = H - sqrt(l) * Lv;
 
     vec3 n = I - S.center;
 
@@ -485,7 +486,7 @@ Object get_intersection(Line Ray){
 
 ////////////////////////////////////////////////////////////////////////
 
-vec4 calc_color(Object Obj, Line Normal, float dist_from_origin){
+vec4 calc_color(Object Obj, Line Normal){
 
     vec3 col = vec3(0.);
     vec3 obj_col ;
@@ -530,14 +531,17 @@ vec4 calc_color(Object Obj, Line Normal, float dist_from_origin){
     if (Obj.is_light){
         return vec4(obj_col,-1.0);
     } else if (light_type != 0 && Obj.mirror != 1.0) { // Add light
-        
-
         for (int i=0 ; i < nb_object ; i++) {
 
             Object Light = objects[i];
             if ( ! Light.is_light ){ continue; }
 
-            vec3 center = Light.type == 0 ? Light.sphere.center : Light.plane.origin ;
+            vec3 center ; 
+            if (Light.type == TYPE_SPHERE) center = Light.sphere.center ; 
+            else if (Light.type == TYPE_CYLINDER) center = Light.cylinder.origin ;
+            else if (Light.type == TYPE_CYLINDER_FULL) center = Light.cylinder.origin ;
+            else center = Light.plane.origin ;
+
             vec3 light_dir = center - Normal.origin ;
             Line ray = Line(center,-light_dir);
             Object inter = get_intersection(ray);
@@ -558,8 +562,11 @@ vec4 calc_color(Object Obj, Line Normal, float dist_from_origin){
                 coef = angle * 5 / (2.0 + dist) ;
                 
                 if (angle != 0){
-                    if (light_type == 2) col += coef * Light.color * obj_col;
-                    else col += coef * Light.color;
+                    vec3 Light_color = vec3(1);
+                    // vec3 Light_color = Light.color;
+                    col += coef * Light_color ; //* obj_col
+                    // if (light_type == 2) col += coef * Light_color * obj_col;
+                    // else col += coef * Light_color;
                     n_col += coef ;
                 }
             } else {
@@ -571,9 +578,10 @@ vec4 calc_color(Object Obj, Line Normal, float dist_from_origin){
     }
 
     if (light_type != 2) { // Ambient light
-        col += ( 1 - Obj.mirror ) * obj_col ;
-        n_col += ( 1 - Obj.mirror ) ;
-        
+        // col += ( 1 - Obj.mirror ) * obj_col ;
+        // n_col += ( 1 - Obj.mirror ) ;
+        col += obj_col ;
+        n_col += 1 ;
     }
     
     return vec4(col,n_col);
@@ -583,16 +591,12 @@ vec3 draw(Line Ray, const int n_reflection){
     vec3 col = vec3(0.);
     float n_col = 0;
     float col_weight = 1;
-    float dist_from_origin = 0;
-
-
-    // const int n_reflection = 4;
 
     for (int i = 0; i < n_reflection; i++){
 
         Object best_obj = get_intersection(Ray);
 
-        if (best_obj.type == -1){
+        if (best_obj.type == TYPE_ERROR){
             if (light_type == 2) col += col_weight * vec3(0.0) ;
             else col += col_weight * vec3(0.0, 0.0, 0.3) ;
             n_col += col_weight ;
@@ -600,16 +604,14 @@ vec3 draw(Line Ray, const int n_reflection){
         }
 
         Line N = get_intersection(Ray,best_obj);
-        dist_from_origin += distance(N.origin, Ray.origin) ;
 
-        vec4 res = calc_color(best_obj, N, dist_from_origin );
+        vec4 res = calc_color(best_obj, N );
         
-        if ( res.w == -1.0) {
+        if ( res.w == -1.0) { // The object is light
             col += col_weight * res.xyz;
             n_col += col_weight;
             break ;
         }
- 
 
         col += col_weight * res.w * res.xyz ;
         n_col += col_weight * res.w ;
@@ -621,15 +623,12 @@ vec3 draw(Line Ray, const int n_reflection){
             bool is_reverse ;
             if (best_obj.type == 0) is_reverse = dot(N.origin - best_obj.sphere.center,Ray.v) > 0.0 ;
             else if (best_obj.type == 1) is_reverse = dot(N.v,Ray.v) > 0.0 ;
-            // else if (best_obj.type == 1) is_reverse = dot(N.origin - best_obj.cylinder.origin,Ray.v) > 0.0 ;
             else is_reverse = dot(cross(best_obj.plane.u1,best_obj.plane.u2),Ray.v) > 0 ;
-            // col += 3 * (is_reverse ? vec3(.5,.1,.1) : vec3(.1,.1,.5)) ;
-            // n_col += 3 ;
-            // break ;
+            
             float r = is_reverse ? 1/best_obj.refrac : best_obj.refrac ;
+
             Ray.v = refraction(Ray.v,N.v,r) ;
             if (Ray.v == vec3(0.0)) break ;
-            // Ray.v = refraction(Ray.v,N.v,best_obj.refrac) ;
         } else {
             break ;
             Ray.v = reflexion(Ray.v,N.v);
@@ -668,7 +667,7 @@ vec3 draw2(Line Ray, const int n_rays_){
 
     for (int i = 0; i < n_rays; i++){
 
-        if (! is_init[i]) continue ;
+        if (! is_init[i]) break ;
         // if (coeffs[i] == 0.0 ) continue ;
         Object best_obj = get_intersection(Rays[i]);
 
@@ -684,11 +683,10 @@ vec3 draw2(Line Ray, const int n_rays_){
 
         Line N = get_intersection(Rays[i],best_obj);
 
-        vec4 res = calc_color(best_obj, N, 0 );
+        vec4 res = calc_color(best_obj, N );
         
         if ( res.w == -1.0) { // obj is light
             cols[i] = res.xyz;
-
             continue ;
         }
         cols[i] = res.rgb ;
@@ -697,8 +695,10 @@ vec3 draw2(Line Ray, const int n_rays_){
         if ( n-2< n_rays && best_obj.refrac != 1){
 
             bool is_reverse ;
-            if (best_obj.type == 0) is_reverse = dot(N.origin - best_obj.sphere.center,Ray.v) > 0.0 ;
-            else if (best_obj.type == 1) is_reverse = dot(N.v,Ray.v) > 0.0 ;
+            if (best_obj.type == TYPE_SPHERE)
+                is_reverse = dot(N.origin - best_obj.sphere.center,Ray.v) > 0.0 ;
+            else if (best_obj.type == TYPE_CYLINDER || best_obj.type == TYPE_CYLINDER_FULL)
+                is_reverse = dot(N.v,Ray.v) > 0.0 ;
             // else if (best_obj.type == 1) is_reverse = dot(N.origin - best_obj.cylinder.origin,Ray.v) > 0.0 ;
             else is_reverse = dot(cross(best_obj.plane.u1,best_obj.plane.u2),Ray.v) > 0 ;
             float r = is_reverse ? 1/best_obj.refrac : best_obj.refrac ;

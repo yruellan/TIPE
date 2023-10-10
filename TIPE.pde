@@ -16,7 +16,7 @@ void setup() {
   println("run Test.pde");
   
   
-  file = "shader2.glsl" ;
+  file = "shader.glsl" ;
   shader = loadShader(file);
   
   frameRate(30);
@@ -44,9 +44,6 @@ void draw() {
   shader.set("light_height", light_h);
   shader.set("light_type", light_type);
   shader.set("draw_type",draw_type); 
-  
-  //shader.set("u_time", millis() / 1000.0);
-  //shader.set("u_tex0Resolution",1024,1024);
   
   shader.set("u_tex0",loadImage("content/hokusai.jpg")); 
   shader.set("earth",loadImage("content/earth.jpg")); 
@@ -108,7 +105,7 @@ void keyPressed(){
   else{
     print("Reaload Shader  ",key,": ",keyCode);
     shader = loadShader(file);
-    println("  ;");
+    println(" ;");
   }
   redraw();
 }
