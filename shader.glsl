@@ -168,19 +168,19 @@ Object objects[nb_object] = Object[nb_object](
 
     
 
-    new_Plane(
+    new_Rectangle(
        Plane(vec3(7,0,-5),vec3(0,0,10),vec3(0,7,0)),
-       vec3(0.0, 0.0, 0.0),1
+       vec3(0.0, 0.0, 0.0),.9
     ),
-    new_Object(Sphere(vec3(1,2.2,-2),1.8),vec3(1.0, 0.6, 0.0),1),
+    new_Object(Sphere(vec3(1,2.2,-2),1.8),vec3(1.0, 0.6, 0.0),.9),
     // new_Object(Sphere(vec3(1,1.5,2),1),COLOR_EARTH,0.0),
 
-    // new_Object(Cylinder(vec3(-12,1,15),vec3(5,2,0),1),vec3(0.0, 0.7, 1.0),0.0),
+    new_Object(Cylinder(vec3(-1,1,3),vec3(1,3,2),.5),vec3(0.0, 0.7, 1.0),.9),
     
-    new_Rectangle(
-        Plane(vec3(6.99,4,5),vec3(0,0,-3),vec3(0,3,0)),
-        COLOR_HOKUSAI, 0.0
-    ),
+    // new_Rectangle(
+    //     Plane(vec3(6.99,4,5),vec3(0,0,-3),vec3(0,3,0)),
+    //     COLOR_HOKUSAI, 0.0
+    // ),
 
 
     // Floor :
@@ -473,7 +473,7 @@ Object get_intersection(Line Ray){
         float dist = dot(Intersection.origin - Ray.origin,Intersection.origin - Ray.origin);
         if (
             Intersection.v != vec3(0.) && 
-            dist != 0 &&
+            abs(dist) > 0.001  &&
             ( min_len == -1. || dist < min_len )
         ){
             min_len = dist ;
@@ -673,7 +673,8 @@ vec3 draw2(Line Ray, const int n_rays_){
             if (light_type == 2) cols[i] =  vec3(0.0) ;
             else {
                 vec2 v = spherical_cord(Rays[i].v + vec3(0,.1,0)) ;
-                cols[i] = texture2D(sky,vec2(v.x,2*v.y)).rgb ;
+                if (v.y > .5) cols[i] = vec3(0.0, 0.8, 1.0) ;
+                else cols[i] = texture2D(sky,vec2(v.x,2*v.y)).rgb ;
             }
             continue ;
         }
