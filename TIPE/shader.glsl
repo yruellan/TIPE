@@ -227,17 +227,6 @@ float norm2(vec3 v){
 }
 
 
-float rand(vec2 co){
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-vec3 random_dir(vec3 v){
-    // float x = 2. * rand(v) - 1.;
-    // float y = 2. * rand(vec3(v.y,v.z,v.x)) - 1.;
-    // float z = 2. * rand(vec3(v.z,v.x,v.y)) - 1.;
-    // return normalize(vec3(x,y,z));
-    return vec3(0.);
-}
 
 vec3 locals_cord(vec3 v, vec3 u1, vec3 u2){
     // return cords of v in local base (u1,u2)
