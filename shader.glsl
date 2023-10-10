@@ -564,9 +564,8 @@ vec4 calc_color(Object Obj, Line Normal){
                 if (angle != 0){
                     vec3 Light_color = vec3(1);
                     // vec3 Light_color = Light.color;
-                    col += coef * Light_color ; //* obj_col
-                    // if (light_type == 2) col += coef * Light_color * obj_col;
-                    // else col += coef * Light_color;
+                    if (light_type == 2) col += coef * Light_color * obj_col;
+                    else col += coef * Light_color;
                     n_col += coef ;
                 }
             } else {
@@ -671,13 +670,12 @@ vec3 draw2(Line Ray, const int n_rays_){
         // if (coeffs[i] == 0.0 ) continue ;
         Object best_obj = get_intersection(Rays[i]);
 
-        if (best_obj.type == -1){
+        if (best_obj.type == -1){ // show sky
             if (light_type == 2) cols[i] =  vec3(0.0) ;
             else {
                 vec2 v = spherical_cord(Rays[i].v + vec3(0,.1,0)) ;
                 cols[i] = texture2D(sky,vec2(v.x,2*v.y)).rgb ;
             }
-
             continue ;
         }
 
@@ -690,7 +688,6 @@ vec3 draw2(Line Ray, const int n_rays_){
             continue ;
         }
         cols[i] = res.rgb ;
-        // coeffs[i] *= res.w ;
 
         if ( n-2< n_rays && best_obj.refrac != 1){
 
