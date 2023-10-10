@@ -168,21 +168,19 @@ Object objects[nb_object] = Object[nb_object](
 
     
 
-    new_Rectangle(
+    new_Plane(
        Plane(vec3(7,0,-5),vec3(0,0,10),vec3(0,7,0)),
-       vec3(0.0, 0.6, 1.0),0.5
+       vec3(0.0, 0.0, 0.0),1
     ),
     new_Object(Sphere(vec3(1,2.2,-2),1.8),vec3(1.0, 0.6, 0.0),1),
-    // Earth COLOR_EARTH vec3(1.0, 0.0, 0.83)
-    new_Object(Sphere(vec3(1,1.5,2),1),COLOR_EARTH,0.0),
+    // new_Object(Sphere(vec3(1,1.5,2),1),COLOR_EARTH,0.0),
 
     // new_Object(Cylinder(vec3(-12,1,15),vec3(5,2,0),1),vec3(0.0, 0.7, 1.0),0.0),
     
-    // // Hokusai
-    // new_Rectangle(
-    //     Plane(vec3(4,1,0),vec3(-1,0,-3),vec3(0,2,0)),
-    //     COLOR_HOKUSAI, 0.0
-    // ),
+    new_Rectangle(
+        Plane(vec3(6.99,4,5),vec3(0,0,-3),vec3(0,3,0)),
+        COLOR_HOKUSAI, 0.0
+    ),
 
 
     // Floor :
@@ -406,17 +404,19 @@ Line get_intersection(Line L, Plane T, int type){
 
     vec3 n = cross(T.u1,T.u2);
     
-    
-    if (dot(n,L.v) == 0.) return Line(vec3(0.),vec3(0.));
+    // Line is perpendicular to n --> no intersection
+    if (dot(n,L.v) == 0.0) return Line(vec3(0.),vec3(0.));
 
     // The line intersect the plane of the plane
     float lambda = dot(n, T.origin - L.origin) / dot(n,L.v);
-    if (lambda <= 0.0) return Line(vec3(0.),vec3(0.));
+    if (lambda <= 0.0) return Line(vec3(0.),vec3(0.)); // The intersection is behind us
+    
     // H is the intersection
     vec3 H = L.origin + lambda * L.v ;
     vec3 v = H - T.origin ;
 
     vec3 normal = dot(L.v,n) > 0.0 ? -n : n ;
+    normal = normalize(normal) ;
 
     if (type == TYPE_PLANE) return Line(H, normal);
 
@@ -667,7 +667,6 @@ vec3 draw2(Line Ray, const int n_rays_){
     for (int i = 0; i < n_rays; i++){
 
         if (! is_init[i]) break ;
-        // if (coeffs[i] == 0.0 ) continue ;
         Object best_obj = get_intersection(Rays[i]);
 
         if (best_obj.type == -1){ // show sky
