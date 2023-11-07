@@ -11,7 +11,8 @@ boolean draw_type ;
 boolean take_picture ;
 
 void setup() {
-  size(800, 800, P2D);
+  //size(800, 800, P2D);
+  size(600, 600, P2D);
   noStroke();
   println("run Test.pde");
   
@@ -21,8 +22,8 @@ void setup() {
   
   frameRate(30);
   
-  x = -5.0 ;
-  y = 0.0 ;
+  x = 0.0 ;
+  y = -5.0 ;
   light_h = 4 ;
   light_type = 0 ;
   picture_n = 0 ;
@@ -33,26 +34,29 @@ void setup() {
   setup_table();
   redraw();
   noLoop();
+  
+  
+  shader.set("u_mouse", float(width/2), float(height/2));
+  shader.set("light_height", light_h);
+  shader.set("draw_type",draw_type); 
+  shader.set("light_type", light_type);
+  shader.set("position", x,y);
+  
+  shader.set("u_resolution", float(width), float(height));
+  shader.set("u_tex0",loadImage("content/hokusai.jpg")); 
+  shader.set("earth",loadImage("content/earth.jpg")); 
+  shader.set("sun",loadImage("content/sun.jpg")); 
+  shader.set("ground",loadImage("content/ground.jpg")); 
+  
+  if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
+  else shader.set("sky",loadImage("content/night_sky.jpg")); 
+  
+  shader(shader);
 }
 
 
 void draw() {
   
-  shader.set("u_resolution", float(width), float(height));
-  shader.set("u_mouse", float(mouseX), float(mouseY));
-  shader.set("position", x,y);
-  shader.set("light_height", light_h);
-  shader.set("light_type", light_type);
-  shader.set("draw_type",draw_type); 
-  
-  shader.set("u_tex0",loadImage("content/hokusai.jpg")); 
-  shader.set("earth",loadImage("content/earth.jpg")); 
-  shader.set("sun",loadImage("content/sun.jpg")); 
-  shader.set("ground",loadImage("content/ground.jpg")); 
-  if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
-  else shader.set("sky",loadImage("content/night_sky.jpg")); 
-  
-  shader(shader);
   rect(0,0,width,height);
   
   if (take_picture){
@@ -79,18 +83,25 @@ void keyPressed(){
     //println("rot",t,2*t,TWO_PI*t);
     spe.rotate(-TWO_PI*t);
     x += spe.x * ds ; y += spe.y * ds ;
+    shader.set("position", x,y);
   }
-  else if (keyCode == 46){ light_h-= dh ;} // :
-  else if (keyCode == 47){ light_h+= dh ;} // =
-  else if (keyCode == 77){ // ,
+  else if (keyCode == 46){  // :
+    light_h-= dh ; shader.set("light_height", light_h);}
+  else if (keyCode == 47){  // =
+    light_h+= dh ; shader.set("light_height", light_h);}
+  else if (keyCode == 77){  // ,
     draw_type = !draw_type;
     println("change draw",draw_type);
+    shader.set("draw_type",draw_type); 
   } 
-  else if (keyCode == 44){
-    light_type = (light_type+1)%3 ; // ;
+  else if (keyCode == 44){  // ;
+    light_type = (light_type+1)%3 ; 
+    shader.set("light_type", light_type);
   }
   else if (keyCode == 78){ // n
      sky_is_day= !sky_is_day;
+     if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
+     else shader.set("sky",loadImage("content/night_sky.jpg")); 
   }
   else if (keyCode == 10){
     take_picture = true ;
@@ -103,13 +114,14 @@ void keyPressed(){
     exit();
   }
   else{
-    print("Reaload Shader  ",key,": ",keyCode);
+    println("Reaload Shader  ",key,": ",keyCode);
     shader = loadShader(file);
-    println(" ;");
+    println("");
   }
   redraw();
 }
 
 void mouseMoved(){
+  shader.set("u_mouse", float(mouseX), float(mouseY));
   redraw();
 }
