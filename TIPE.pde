@@ -4,7 +4,7 @@ String file ;
 boolean sky_is_day ;
 
 float x,y ;
-float angle ;
+float angleX, angleY ;
 float light_h ;
 int light_type ;
 int picture_n ;
@@ -13,11 +13,10 @@ boolean take_picture ;
 boolean reload_shader ;
 
 void setup() {
-  //size(800, 800, P2D);
-  size(600, 600, P2D);
+  size(800, 800, P2D);
+  //size(600, 600, P2D);
   noStroke();
   println("run Test.pde");
-  
   
   file = "shader.glsl" ;
   shader = loadShader(file);
@@ -26,7 +25,8 @@ void setup() {
   
   x = 0.0 ;
   y = -5.0 ;
-  angle = 0 ;
+  angleX = 0 ;
+  angleY = 0 ;
   light_h = 4 ;
   light_type = 0 ;
   picture_n = 0 ;
@@ -39,6 +39,9 @@ void setup() {
   
   noLoop();
   redraw();
+ 
+ //https://forum.processing.org/one/topic/run-code-on-exit.html
+ 
 }
 
 
@@ -47,7 +50,8 @@ void draw() {
   rect(0,0,width,height);
   
   if (take_picture){
-    save("pictures/picture"+picture_n+".jpeg");
+    //save("pictures/picture"+picture_n+".jpeg"); // Bad quality
+    save("pictures/picture"+picture_n+".png");
     picture_n++ ;
     println("picture", picture_n);
     take_picture = false ;
@@ -60,10 +64,11 @@ void draw() {
     shader.set("position", x,y);
     
     shader.set("u_resolution", float(width), float(height));
-    shader.set("u_tex0",loadImage("content/hokusai.jpg")); 
+    shader.set("hokusai",loadImage("content/hokusai.jpg")); 
     shader.set("earth",loadImage("content/earth.jpg")); 
     shader.set("sun",loadImage("content/sun.jpg")); 
     shader.set("ground",loadImage("content/ground.jpg")); 
+    shader.set("galaxy",loadImage("content/galaxy.png")); 
     
     if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
     else shader.set("sky",loadImage("content/night_sky.jpg"));
@@ -85,11 +90,19 @@ void keyPressed(){
     else if (keyCode == 38){ spe = PVector.fromAngle(HALF_PI);}
     else if (keyCode == 39){ spe = PVector.fromAngle(0);}
     else if (keyCode == 40){ spe = PVector.fromAngle(-HALF_PI);}
-    float t = float(mouseX)/width - .5 ;
+    float t = (mouseX+angleX)/width - .5 ;
     //println("rot",t,2*t,TWO_PI*t);
-    spe.rotate(angle-TWO_PI*t);
+    spe.rotate(-TWO_PI*t);
     x += spe.x * ds ; y += spe.y * ds ;
     shader.set("position", x,y);
+  }
+  else if (key == 'z' || key == 'q' ||key == 's' ||key == 'd'){
+    if      (key == 'z'){ angleY -= 6;}
+    else if (key == 'q'){ angleX -= 6;}
+    else if (key == 's'){ angleY += 6;}
+    else if (key == 'd'){ angleX += 6;}
+    
+    shader.set("u_mouse", mouseX+angleX, mouseY+angleY);
   }
   
   else if (keyCode == 46){  // :
@@ -129,6 +142,6 @@ void keyPressed(){
 }
 
 void mouseMoved(){
-  shader.set("u_mouse", float(mouseX), float(mouseY));
+  shader.set("u_mouse", mouseX+angleX, mouseY+angleY);
   redraw();
 }
