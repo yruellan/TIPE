@@ -14,12 +14,20 @@
 precision highp float;
 // #endif
 
-uniform sampler2D u_tex0;
-uniform vec2 u_tex0Resolution;
+uniform sampler2D hokusai;
 uniform sampler2D sky;
 uniform sampler2D earth;
 uniform sampler2D ground;
 uniform sampler2D sun;
+uniform sampler2D galaxy;
+uniform sampler2D moon;
+uniform sampler2D sagittarius_A;
+
+uniform bool scene1 ;
+uniform bool scene2 ;
+uniform bool scene3 ;
+uniform bool bases_vectors ;
+
 
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
@@ -27,7 +35,7 @@ uniform float u_time;
 uniform vec2 position;
 uniform float light_height;
 uniform int light_type; // 0: no light, 1: light+ambiente, 2: only light
-uniform bool draw_type ;
+uniform int draw_type ;
 
 
 #define PI 3.1415926535897932384626433832795
@@ -38,8 +46,11 @@ uniform bool draw_type ;
 #define COLOR_SKY vec3(0.0, 0.0, 0.03)
 #define COLOR_GROUND vec3(0, 0, 0.04)
 #define COLOR_SUN vec3(0, 0, 0.05)
+#define COLOR_GALAXY vec3(0, 0, 0.06)
+#define COLOR_MOON vec3(0, 0, 0.07)
+#define COLOR_SAGITTARIUS vec3(0, 0, 0.08)
 
-// -1 error, 0 sphere, 1 cylinder, 2 plane, 3 rect, 4 circle, 5+ triangle
+
 #define TYPE_ERROR -1
 #define TYPE_SPHERE 0
 #define TYPE_CYLINDER 1
@@ -108,6 +119,7 @@ Object new_Object(Sphere S, vec3 color, float mirror){
     O.mirror = mirror;
     return O;
 }
+
 Object new_Object(Cylinder C, vec3 color, float mirror){
     Object O = null_Object();
     O.cylinder = C;
@@ -116,6 +128,15 @@ Object new_Object(Cylinder C, vec3 color, float mirror){
     O.mirror = mirror;
     return O;
 }
+Object new_Cylinder_Full(Cylinder C, vec3 color, float mirror){
+    Object O = null_Object();
+    O.cylinder = C;
+    O.type = TYPE_CYLINDER_FULL;
+    O.color = color;
+    O.mirror = mirror;
+    return O;
+}
+
 Object new_Object(Plane P, vec3 color, float mirror){
     Object O = null_Object();
     O.plane = P;
@@ -124,7 +145,6 @@ Object new_Object(Plane P, vec3 color, float mirror){
     O.mirror = mirror;
     return O;
 }
-
 Object new_Rectangle(Plane P, vec3 color, float mirror){
     Object O = new_Object(P, color, mirror);
     O.type = TYPE_RECTANGLE;
@@ -142,6 +162,7 @@ Object new_typed_Plan(Plane P, vec3 color, float mirror, int type){
 }
 
 
+
 Object Refractor(Object O, float refrac){
     O.refrac = refrac;
     return O;
@@ -155,43 +176,96 @@ Object Light(Object O){
 
 ////////////////////////////////////////////////////////////////////////
 
-#define nb_object 8
+#define nb_object 15
+
 
 
 Object objects[nb_object] = Object[nb_object](
-    // vec3(0.9, 0.85, 1.0) COLOR_SUN
-    Light(new_Object(Sphere(vec3(0,light_height,0),.2),COLOR_SUN,0.0)),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object(),
+    null_Object()
+) ;
+
+int index_obj = 0 ; 
+
+void push_object(Object obj){
+    // inout int index_obj, 
+    objects[index_obj] = obj ;
+    index_obj++ ;
+}
+
+void init_objects(){
+
+    // Bases vectors
+    if (bases_vectors){
+        push_object(new_Object(Cylinder(vec3(0,0,0),vec3(1,0,0),.03),vec3(1,0,0),0.0));
+        push_object(new_Object(Cylinder(vec3(0,0,0),vec3(0,1,0),.03),vec3(0,1,0),0.0));
+        push_object(new_Object(Cylinder(vec3(0,0,0),vec3(0,0,1),.03),vec3(0,0,1),0.0));
+    }
+
+
+    // Scene 1 : somes objects
+    if (scene1){
+        push_object(Light(new_Object(Sphere(vec3(0,light_height,0),1),COLOR_SUN,0.0)));
+        push_object(new_Rectangle(
+            Plane(vec3(-5,1,5),vec3(10,0,0),vec3(0,6,0)),
+            COLOR_GALAXY, 0.0
+        ));
+        push_object(new_Object(Sphere(vec3(-2,1.5,0),1),COLOR_EARTH,0.0));
+        push_object(new_Object(Sphere(vec3(2.5,3.5,-1),.4),COLOR_MOON,0.0));
+        // push_object(new_Object(Cylinder(vec3(-4,1,3),vec3(2,3,-1),2),COLOR_SAGITTARIUS,0));
+        // push_object(new_Object(Cylinder(vec3(0,0,0),vec3(0,1.01,0),1),COLOR_SKY,0));
+    }
     
-    new_Object(Cylinder(vec3(0,0,0),vec3(1,0,0),.03),vec3(1,0,0),0.0),
-    new_Object(Cylinder(vec3(0,0,0),vec3(0,1,0),.03),vec3(0,1,0),0.0),
-    new_Object(Cylinder(vec3(0,0,0),vec3(0,0,1),.03),vec3(0,0,1),0.0),
 
+    // Scene 2 : Mirrors
+    if (scene2){
+        push_object(Light(new_Object(Sphere(vec3(0,4,0),.2),COLOR_SUN,0.0)));
+        push_object(new_Rectangle(
+           Plane(vec3(-7.5,0,7),vec3(15,0,0),vec3(0,10,0)),
+           vec3(0.0, 0.0, 0.0),.9
+        ));
+        push_object(new_Object(Sphere(vec3(-2,1.5,0),1),COLOR_EARTH,0.0));
+        push_object(new_Object(Sphere(vec3(2,2.2,1),1.8),vec3(1.0, 0.6, 0.0),.9));
+        push_object(new_Object(Cylinder(vec3(-4,1,1),vec3(2,3,-1),.5),vec3(0.0, 0.7, 1.0),.9));
+    }
     
+    // Scene 3 : Refraction
+    if (scene3){
 
-    new_Rectangle(
-       Plane(vec3(7,0,-5),vec3(0,0,10),vec3(0,7,0)),
-       vec3(0.0, 0.0, 0.0),.9
-    ),
-    new_Object(Sphere(vec3(1,2.2,-2),1.8),vec3(1.0, 0.6, 0.0),.9),
-    // new_Object(Sphere(vec3(1,1.5,2),1),COLOR_EARTH,0.0),
+        // float refrac = light_height / 10.0 - 1. + 0.01 ;
+        float refrac = exp(light_height/5) + 0.001;
 
-    new_Object(Cylinder(vec3(-1,1,3),vec3(1,3,2),.5),vec3(0.0, 0.7, 1.0),.9),
-    
-    // new_Rectangle(
-    //     Plane(vec3(6.99,4,5),vec3(0,0,-3),vec3(0,3,0)),
-    //     COLOR_HOKUSAI, 0.0
-    // ),
-
+        push_object(Refractor(new_Rectangle(
+           Plane(vec3(0,1.5,5),vec3(10,0,0),vec3(0,5,0)),
+           vec3(0,0,0),.9
+        ), refrac));
+        push_object(Refractor(new_Rectangle(
+           Plane(vec3(0,1.5,5),vec3(0,0,10),vec3(0,5,0)),
+           vec3(0,0,0),.9
+        ), refrac));
+        push_object(new_Object(Cylinder(vec3(-1,1,8),vec3(10,10,-2),.5),vec3(0.0, 0.7, 1.0),0));
+    }
 
     // Floor :
-    new_Plane( 
+    push_object(new_Plane( 
         Plane(vec3(0,0,0),vec3(2,0,0),vec3(0,0,2)),
         COLOR_GROUND,0.0
-    )
+    ));
 
-
-);
-
+}
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -459,7 +533,28 @@ Line get_intersection(Line L, Object O){
     if (O.type == TYPE_SPHERE) return get_intersection(L, O.sphere);
     if (O.type == TYPE_CYLINDER) return get_intersection(L, O.cylinder);
     if (O.type == TYPE_CYLINDER_FULL){
-        return Line(vec3(0.),vec3(0.));
+        return get_intersection(L, O.cylinder) ;
+        // vec3 v1 = vec3(1,0,0);
+        // vec3 v2 = vec3(0,1,0);
+        // if (abs(dot(vec3(1,0,0),O.cylinder.v)) < 0.1) v1 = vec3(1,0,0);
+        // else v1 = O.cylinder.radius * normalize(cross(vec3(1,0,0),O.cylinder.v));
+        // v2 = cross(v1,O.cylinder.v);
+        // // return get_intersection(L, O.cylinder) ;
+        // Plane O2 = Plane(O.cylinder.origin,v1,v2);
+        // Plane O3 = Plane(O.cylinder.origin+O.cylinder.v,v1,v2);
+        
+        // Line L1 = get_intersection(L, O.cylinder);
+        // Line L2 = get_intersection(L, O2, TYPE_CIRCLE);
+        // Line L3 = get_intersection(L, O3, TYPE_CIRCLE);
+
+        // float d1, d2, d3;
+        // // float d1 = dot(L1.origin - L.origin, L1.origin - L.origin);
+        // // float d2 = dot(L2.origin - L.origin, L2.origin - L.origin);
+        // // float d3 = dot(L3.origin - L.origin, L3.origin - L.origin);
+        // return L2 ;
+        // if (d1 <= d2 && d1 <= d3) return L1 ;
+        // else if (d2 <= d3) return L2 ;
+        // else return L3 ;
     }
     return get_intersection(L, O.plane, O.type);
 }
@@ -473,7 +568,7 @@ Object get_intersection(Line Ray){
         float dist = dot(Intersection.origin - Ray.origin,Intersection.origin - Ray.origin);
         if (
             Intersection.v != vec3(0.) && 
-            abs(dist) > 0.001  &&
+            abs(dist) > 0.1  &&
             ( min_len == -1. || dist < min_len )
         ){
             min_len = dist ;
@@ -486,26 +581,49 @@ Object get_intersection(Line Ray){
 
 ////////////////////////////////////////////////////////////////////////
 
+vec3 calc_img(sampler2D img, Object Obj, Line Normal){
+
+    vec2 pos ;
+    if (Obj.type == TYPE_SPHERE){
+        pos = spherical_cord(Normal.origin - Obj.sphere.center);
+    } else if (Obj.type == TYPE_CYLINDER){
+        vec3 v = Normal.origin - Obj.cylinder.origin ;
+        vec2 pos = vec2(0,0);
+        pos.y = .5 ;
+        // pos.y = dot(v,Obj.cylinder.v) / sqrt(norm2(Obj.cylinder.v)) ;
+        // v -= Obj.cylinder.radius * pos.y * Obj.cylinder.v ;
+        pos.x = atan(v.z,v.x) / TWO_PI ;
+    } else {
+        vec3 v = Normal.origin - Obj.plane.origin ;
+        vec3 v2 = locals_cord(v,Obj.plane.u1,Obj.plane.u2);
+        pos = vec2(v2.x / v2.z, 1-v2.y / v2.z) ;
+    }
+
+    // return pos ;
+    return texture2D(img,pos).rgb ;
+}
+
 vec4 calc_color(Object Obj, Line Normal){
 
     vec3 col = vec3(0.);
     vec3 obj_col ;
     float n_col = 0.0;
 
-    if ( Obj.color == COLOR_HOKUSAI){ // image Hokusai
-        
-        vec3 v = Normal.origin - Obj.plane.origin ;
-        vec3 pos = locals_cord(v,Obj.plane.u1,Obj.plane.u2);
-        obj_col = texture2D(u_tex0,vec2(pos.x / pos.z, 1-pos.y / pos.z) ).rgb;
+    if ( Obj.color == COLOR_HOKUSAI){
+        obj_col = calc_img(hokusai, Obj, Normal);
+        // obj_col = texture2D(hokusai,calc_img(Obj, Normal)).rgb ;
 
-    } else if ( Obj.color == COLOR_EARTH){ // image Earth
-        
-        vec2 v = spherical_cord(Normal.origin - Obj.sphere.center);
-        obj_col = texture2D(earth,v).rgb;
-    } else if ( Obj.color == COLOR_SUN){ // image Sun
-        
-        vec2 v = spherical_cord(Normal.origin - Obj.sphere.center);
-        obj_col = texture2D(sun,v).rgb;
+    } else if ( Obj.color == COLOR_GALAXY){
+        obj_col = calc_img(galaxy, Obj, Normal);
+    } else if ( Obj.color == COLOR_EARTH){
+        obj_col = calc_img(earth, Obj, Normal);
+    } else if ( Obj.color == COLOR_SUN){
+        obj_col = calc_img(sun, Obj, Normal);
+
+    } else if ( Obj.color == COLOR_MOON){
+        obj_col = calc_img(moon, Obj, Normal);
+    } else if ( Obj.color == COLOR_SAGITTARIUS){
+        obj_col = calc_img(sagittarius_A, Obj, Normal);
 
     } else if ( Obj.color == COLOR_GROUND) { // Color the floor
         vec3 H = Normal.origin ;
@@ -514,13 +632,14 @@ vec4 calc_color(Object Obj, Line Normal){
         // obj_col = cond ? vec3(0.25) : vec3(0.75) ;
 
         vec2 pos = H.xz / 10 ;
+        vec2 pos_f = fract(pos) ;
         // float fx = fract(floor(pos.x)/2)*2;
         // float gx = fx*(1-fract(pos.x)) + (1-fx)*fract(pos.x);
         // float fy = fract(floor(pos.y)/2)*2;
         // float gy = fy*(1-fract(pos.y)) + (1-fy)*fract(pos.y);
 
         // obj_col = texture2D(ground,vec2(gx,gy)).rgb ;
-        obj_col = texture2D(ground,vec2(fract(pos.x),fract(pos.y))).rgb ;
+        obj_col = texture2D(ground,pos_f).rgb ;
 
     } else { // base color
         obj_col = Obj.color ;
@@ -642,7 +761,7 @@ vec3 draw(Line Ray, const int n_reflection){
 
 vec3 draw2(Line Ray, const int n_rays_){
     
-    const int n_rays = 5;
+    const int n_rays = 8;
 
     Line Rays[n_rays] ;
     vec3 cols[n_rays] ;
@@ -666,10 +785,11 @@ vec3 draw2(Line Ray, const int n_rays_){
 
     for (int i = 0; i < n_rays; i++){
 
+        // if (i>light_height) break ;
         if (! is_init[i]) break ;
         Object best_obj = get_intersection(Rays[i]);
 
-        if (best_obj.type == -1){ // show sky
+        if (best_obj.type == TYPE_ERROR){ // show sky
             if (light_type == 2) cols[i] =  vec3(0.0) ;
             else {
                 vec2 v = spherical_cord(Rays[i].v + vec3(0,.1,0)) ;
@@ -684,11 +804,11 @@ vec3 draw2(Line Ray, const int n_rays_){
         vec4 res = calc_color(best_obj, N );
         
         if ( res.w == -1.0) { // obj is light
-            cols[i] = res.xyz;
+            cols[i] = res.rgb;
             continue ;
         }
         cols[i] = res.rgb ;
-
+        // *0 + vec3(0.0, 0.5176, 1.0)
         if ( n-2< n_rays && best_obj.refrac != 1){
 
             bool is_reverse ;
@@ -700,20 +820,20 @@ vec3 draw2(Line Ray, const int n_rays_){
             else is_reverse = dot(cross(best_obj.plane.u1,best_obj.plane.u2),Ray.v) > 0 ;
             float r = is_reverse ? 1/best_obj.refrac : best_obj.refrac ;
 
-            Rays[n].v = refraction(Rays[i].v,N.v,r);
+            Rays[n].v = refraction(Rays[i].v,N.v,r);        // Refraction
             Rays[n].origin = N.origin ;
             vec2 C = taux_ref(Rays[i].v,Rays[n].v,N.v,r) ;
             coeffs[n] = C.x * coeffs[i]/res.w;
             is_init[n] = true ;
             n++ ;
 
-            Rays[n].v = reflexion(Rays[i].v,N.v);
+            Rays[n].v = reflexion(Rays[i].v,N.v);          // Reflexion
             Rays[n].origin = N.origin ;
             coeffs[n] = C.y * coeffs[i]/res.w;
             is_init[n] = true ;
             n++ ;
 
-        } else if (best_obj.mirror != 0.0 && n-1<n_rays) {
+        } else if (best_obj.mirror != 0.0 && n<n_rays) {
             Rays[n].v = reflexion(Rays[i].v,N.v);
             Rays[n].origin = N.origin ;
             coeffs[n] = coeffs[i] * best_obj.mirror;
@@ -729,9 +849,9 @@ vec3 draw2(Line Ray, const int n_rays_){
 
     for (int i = 0; i < n_rays; i++){
         if (is_init[i]){
-            col += cols[i] * coeffs[i] ; 
-            sum_coeffs += coeffs[i] ;
-            // sum_coeffs += 1 ;
+            col += cols[i] + 0* coeffs[i] ; 
+            // sum_coeffs += coeffs[i] ;
+            sum_coeffs += 1 ;
             nb_init += 1 ;
         }
     }
@@ -745,6 +865,8 @@ void main() {
     vec2 st =  1.0 * (gl_FragCoord.xy / vec2(size,size) - .5);
     const int n_rays = 4 ;
 
+    init_objects();
+
     vec2 mouse = 3 * (u_mouse / u_resolution - .5) ;
     mat3 M = rot(0,-2*mouse.x,mouse.y);
     vec3 B = vec3(st.x,st.y,0.66);
@@ -754,7 +876,7 @@ void main() {
         A,
         normalize(M * B)
     );
-    vec3 col = draw_type ? draw(Ray,n_rays) : draw2(Ray,n_rays) ;
+    vec3 col = draw_type == 1 ? draw(Ray,1) : draw2(Ray,n_rays) ;
     
     gl_FragColor = vec4(col, 1.0);
    
