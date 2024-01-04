@@ -23,10 +23,11 @@ uniform sampler2D galaxy;
 uniform sampler2D moon;
 uniform sampler2D sagittarius_A;
 
+uniform bool bases_vectors ;
 uniform bool scene1 ;
 uniform bool scene2 ;
 uniform bool scene3 ;
-uniform bool bases_vectors ;
+uniform bool scene4 ;
 
 
 uniform vec2 u_resolution;
@@ -259,6 +260,12 @@ void init_objects(){
         push_object(new_Object(Cylinder(vec3(-1,1,8),vec3(10,10,-2),.5),vec3(0.0, 0.7, 1.0),0));
     }
 
+    // Scene 4 : A sphere
+    if (scene4){
+        vec3 col = vec3(0.3333, 0.7176, 0.5294);
+        push_object(new_Object(Sphere(vec3(0,light_height,0),1.5),col,0.0));
+    }
+
     // Floor :
     push_object(new_Plane( 
         Plane(vec3(0,0,0),vec3(2,0,0),vec3(0,0,2)),
@@ -297,6 +304,23 @@ mat3 rot(float t12, float t13, float t23){
 float norm2(vec3 v){
     return dot(v,v);
 }
+
+float norm(vec3 v){
+    return sqrt(dot(v,v));
+}
+
+float dist(vec3 A, vec3 B){
+    return sqrt(dot(A-B,A-B));
+}
+
+float dist2(vec3 A, vec3 B){
+    return dot(A-B,A-B);
+}
+
+vec3 projection(Line L, vec3 A){
+    return L.origin + dot(A-L.origin,L.v) * L.v / norm2(L.v) ;
+}
+
 
 
 
@@ -405,6 +429,100 @@ vec2 taux_ref(vec3 u, vec3 v_t, vec3 n, float r){
     float T = T_1 / T_2 ;
 
     return vec2(T,R);
+}
+
+////////////////////////////////////////////////////////////////////////
+
+float distance(vec3 P, Sphere S){
+    return dist(P, S.center) - S.radius ;
+}
+
+float distance(vec3 P, Line L){
+    vec3 P2 = projection(L,P);
+    float a = distance(P2,L.origin) ;
+    if (a < 0) return dist(L.origin,P) ;
+    if (a > norm(L.v)) return dist(L.origin+L.v,P) ;
+    return dist(P,P2) ;
+}
+
+float distance(vec3 P, Cylinder C){
+    vec3 P2 = projection(Line(C.origin,C.v), P) ;
+
+    float h = dist(P2, C.origin) ;
+    float r = dist(P2, P) ;
+    
+    float h2 = clamp(h,0,norm(C.v)) ;
+    float r2 = C.radius ; // ??????
+
+    vec3 P3 = C.origin + h2 * normalize(C.v) + r2 * normalize(P-P2) ;
+    return dist(P,P3) ; 
+}
+
+float distance(vec3 P, Plane T, int type){
+    vec3 pos = locals_cord(P-T.origin,T.u1,T.u2) ;
+    float a = pos.x / pos.z ;
+    float b = pos.y / pos.z ;
+
+    float a2, b2 ;
+
+    if (type == TYPE_PLANE){
+        a2 = clamp(a,-100,100) ;
+        b2 = clamp(b,-100,100) ;
+    } else if (type == TYPE_RECTANGLE){
+        a2 = clamp(a,0,1) ;
+        b2 = clamp(b,0,1) ;
+    } else if (type == TYPE_CIRCLE){
+        float r = a*a+b*b;
+        if (r > 1){
+            a2 = a / sqrt(r) ;
+            b2 = b / sqrt(r) ;
+        } else {
+            a2 = a ;
+            b2 = b ;
+        }
+    } else if (type == TYPE_TRIANGLE){
+        float d = a+b ;
+        if (d>1){
+            a2 = a / d;
+            b2 = b / d;
+        } else {
+            a2 = a ;
+            b2 = b ;
+        }
+    } else {
+        return -1. ;
+    }
+
+    vec3 P2 = T.origin + a2 * T.u1 + b2 * T.u2 ;
+    return dist(P,P2) ;
+}
+
+float distance(Line L, Object O){
+    vec3 P = L.origin ;
+    if (O.type == TYPE_ERROR) return -1.;
+    if (O.type == TYPE_SPHERE) return distance(P, O.sphere);
+    if (O.type == TYPE_CYLINDER) return distance(P, O.cylinder);
+    if (O.type == TYPE_CYLINDER_FULL){
+        return distance(P, O.cylinder) ;
+    }
+    return distance(P, O.plane, O.type);
+}
+
+Object distance(Line Ray){
+    float min_dist = -1. ;
+    Object best_obj ;
+
+    for (int j = 0 ; j < nb_object ; j++){
+        float dist_j = distance(Ray, objects[j]) ;
+        if (
+            dist_j >= 0 &&
+            ( min_dist == -1. || dist_j < min_dist )
+        ){
+            min_dist = dist_j ;
+            best_obj = objects[j] ;
+        }
+    }
+    return min_dist == -1 ? null_Object() : best_obj ;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -707,7 +825,7 @@ vec4 calc_color(Object Obj, Line Normal){
 
 vec3 draw(Line Ray, const int n_reflection){
     vec3 col = vec3(0.);
-    float n_col = 0;
+    float n_col = 0; // replace with vec4
     float col_weight = 1;
 
     for (int i = 0; i < n_reflection; i++){
@@ -758,6 +876,7 @@ vec3 draw(Line Ray, const int n_reflection){
 
     return col / n_col ;
 }
+
 
 vec3 draw2(Line Ray, const int n_rays_){
     
@@ -860,6 +979,39 @@ vec3 draw2(Line Ray, const int n_rays_){
     return col / sum_coeffs ;
 }
 
+vec3 draw3(Line Ray){
+    vec3 col = vec3(0.);
+    float n_col = 0;
+
+    const int nb_rec = 20;
+
+    for (int i = 0 ; i < nb_rec ; i++){
+        Object best_obj = distance(Ray);
+
+        if (best_obj.type == TYPE_ERROR){ // show sky
+            return vec3(0.0, 0.0, 0.5);
+            // if (light_type == 2) cols[i] =  vec3(0.0) ;
+            // else {
+            //     vec2 v = spherical_cord(Rays[i].v + vec3(0,.1,0)) ;
+            //     if (v.y > .5) cols[i] = vec3(0.0, 0.8, 1.0) ;
+            //     else cols[i] = texture2D(sky,vec2(v.x,2*v.y)).rgb ;
+            // }
+        }
+
+        float D = distance(Ray,best_obj);
+
+        if (abs(D) < .01){
+            return calc_color(best_obj,Line(Ray.origin,vec3(0))).rgb ;
+        }
+
+        if (D < 0) return vec3(.5,.5,.5) ;
+        if (D > 100) return vec3(0.0, 0.3, 0.0) ;
+
+        Ray.origin += 0.9 * D * Ray.v ;
+    }
+    return vec3(1.0, 0.0, 0.0) ;
+}
+
 void main() {
     float size = max(u_resolution.x,u_resolution.y);
     vec2 st =  1.0 * (gl_FragCoord.xy / vec2(size,size) - .5);
@@ -876,7 +1028,11 @@ void main() {
         A,
         normalize(M * B)
     );
-    vec3 col = draw_type == 1 ? draw(Ray,1) : draw2(Ray,n_rays) ;
+    vec3 col ;
+    if (draw_type == 0) col = draw(Ray,1) ;
+    else if (draw_type == 1) col = draw2(Ray,n_rays) ;
+    else if (draw_type == 2) col = draw3(Ray);
+    else col = vec3(0.8039, 0.149, 0.7686) ;
     
     gl_FragColor = vec4(col, 1.0);
    
