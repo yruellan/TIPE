@@ -27,42 +27,13 @@ void new_table(){
   
 }
 
-void stop(){
-  println("stop()");
-  super.stop();
-}
-
-@Override
-public void dispose() {
-    println("dispose()");
-    super.dispose();
-}
-
-void exit(){
+void save_table(){
   Table table = loadTable("content/data.csv","header");
-  print("exit() : picture_n = ",picture_n);
+  //print("exit() : picture_n = ",picture_n);
   for (TableRow row : table.rows()) {
     if (row.getInt("id") == 0){
       row.setInt("value",picture_n) ;
     }
   }
   saveTable(table,"content/data.csv");
-  super.exit();
-}
-
-
-void prepareExitHandler () {
-
-  Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-  
-  void run () {
-  
-    System.out.println("SHUTDOWN HOOK");
-  
-     // application exit code here
-    exit();
-  }
-  
-  }));
-
 }

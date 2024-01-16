@@ -1,8 +1,6 @@
 PShader shader;
 String file ;
 
-
-
 float x,y ;
 float angleX, angleY ;
 
@@ -11,9 +9,7 @@ int light_type ;
 boolean sky_is_day ;
 int draw_type ;
 
-boolean scene1 = true ;
-boolean scene2 = false ;
-boolean scene3 = false ;
+int scene = 1 ;
 boolean bases_vectors = false ; 
 
 int picture_n ;
@@ -52,47 +48,61 @@ void setup() {
  
 }
 
+void picture(){
+  float t0 = millis();
+  //save("pictures/picture"+picture_n+".jpeg"); // Bad quality
+  save("pictures/picture"+picture_n+".png");
+  picture_n++ ;
+  save_table();
+  float t1 = millis();
+  println("picture", picture_n, "(",(t1-t0)/1000.0,"s)");
+  take_picture = false ;
+}
+
+void set_shader(){
+  print("Reload");
+  float t0 = millis();
+  flush();
+  shader.set("u_mouse", width/2.0+angleX, height/2.0+angleY);
+  shader.set("light_height", light_h);
+  shader.set("draw_type",draw_type); 
+  shader.set("light_type", light_type);
+  shader.set("position", x,y);
+  
+  shader.set("scene",scene);
+  shader.set("bases_vectors",bases_vectors);
+  
+  shader.set("u_resolution", float(width), float(height));
+  shader.set("hokusai",loadImage("content/hokusai.jpg")); 
+  shader.set("earth",loadImage("content/earth.jpg")); 
+  shader.set("sun",loadImage("content/sun.jpg")); 
+  shader.set("ground",loadImage("content/ground.jpg")); 
+  shader.set("galaxy",loadImage("content/galaxy.png")); 
+  shader.set("moon",loadImage("content/moon.jpg")); 
+  shader.set("sagittarius_A",loadImage("content/sagittarius_A.jpg")); 
+  
+  if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
+  else shader.set("sky",loadImage("content/night_sky.jpg"));
+  shader(shader);
+  reload_shader = false ;
+  float t1 = millis();
+  println("\tShader Reloaded (",(t1-t0)/1000.0,"s)");
+}
 
 void draw() {
-  
-  rect(0,0,width,height);
+ 
   
   if (take_picture){
-    //save("pictures/picture"+picture_n+".jpeg"); // Bad quality
-    save("pictures/picture"+picture_n+".png");
-    picture_n++ ;
-    println("picture", picture_n);
-    take_picture = false ;
+    picture();
   }
   if (reload_shader){
-    print("Reload");
-    flush();
-    shader.set("u_mouse", width/2.0+angleX, height/2.0+angleY);
-    shader.set("light_height", light_h);
-    shader.set("draw_type",draw_type); 
-    shader.set("light_type", light_type);
-    shader.set("position", x,y);
-    
-    shader.set("scene1",scene1);
-    shader.set("scene2",scene2);
-    shader.set("scene3",scene3);
-    shader.set("bases_vectors",bases_vectors);
-    
-    shader.set("u_resolution", float(width), float(height));
-    shader.set("hokusai",loadImage("content/hokusai.jpg")); 
-    shader.set("earth",loadImage("content/earth.jpg")); 
-    shader.set("sun",loadImage("content/sun.jpg")); 
-    shader.set("ground",loadImage("content/ground.jpg")); 
-    shader.set("galaxy",loadImage("content/galaxy.png")); 
-    shader.set("moon",loadImage("content/moon.jpg")); 
-    shader.set("sagittarius_A",loadImage("content/sagittarius_A.jpg")); 
-    
-    if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
-    else shader.set("sky",loadImage("content/night_sky.jpg"));
-    shader(shader);
-    reload_shader = false ;
-    println("\tShader Reloaded");
+    set_shader();
   }
+  
+  float t0 = millis();
+  rect(0,0,width,height);
+  float t1 = millis();
+  println("Scene Drawed (",(t1-t0)/1000.0,"s)");
   
 }
 
@@ -115,29 +125,42 @@ void keyPressed(){
     shader.set("position", x,y);
   }
   else if (key == 'z' || key == 'q' ||key == 's' ||key == 'd'){
-    if      (key == 'z'){ angleY -= 6;}
-    else if (key == 'q'){ angleX -= 6;}
-    else if (key == 's'){ angleY += 6;}
-    else if (key == 'd'){ angleX += 6;}
+    float dtheta = 10 ;
+    if      (key == 'z'){ angleY -= dtheta;}
+    else if (key == 'q'){ angleX -= dtheta;}
+    else if (key == 's'){ angleY += dtheta;}
+    else if (key == 'd'){ angleX += dtheta;}
     
     shader.set("u_mouse", width/2.0+angleX, height/2.0+angleY);
   }
   
-  else if (keyCode == 49){ // 1&
-    scene1 = !scene1 ;
-    shader.set("scene1",scene1);
-  }
-  else if (keyCode == 50){ // 2é
-    scene2 = !scene2 ;
-    shader.set("scene2",scene2);
-  }
-  else if (keyCode == 51){ // 3"
-    scene3 = !scene3 ;
-    shader.set("scene3",scene3);
-  }
-  else if (keyCode == 52){ // 4'
+  else if (keyCode == 64){ // @
     bases_vectors = !bases_vectors ;
     shader.set("bases_vectors",bases_vectors);
+  }
+  else if (keyCode == 49){ // 1&
+    scene = 1 ;
+    shader.set("scene",scene);
+  }
+  else if (keyCode == 50){ // 2é
+    scene = 2 ;
+    shader.set("scene",scene);
+  }
+  else if (keyCode == 51){ // 3"
+    scene = 3 ;
+    shader.set("scene",scene);
+  }
+  else if (keyCode == 52){ // 4'
+    scene = 4 ;
+    shader.set("scene",scene);
+  }
+  else if (key == 'l'){
+    scene -= 1 ;
+    shader.set("scene",scene);
+  }
+  else if (key == 'm'){
+    scene += 1 ;
+    shader.set("scene",scene);
   }
   
   else if (keyCode == 46){  // :
@@ -146,19 +169,19 @@ void keyPressed(){
     light_h+= dh ; shader.set("light_height", light_h);}
   else if (keyCode == 77){  // ,
     draw_type = (draw_type+1)%3;
-    println("change draw type : ",draw_type);
+    //println("change draw type : ",draw_type);
     shader.set("draw_type",draw_type); 
   } 
   else if (keyCode == 44){  // ;
-    light_type = (light_type+1)%3 ; 
-    shader.set("light_type", light_type);
+    light_type = (light_type+1)%3 ;
+    shader.set("light_type",light_type); 
   }
   else if (keyCode == 78){ // n
      sky_is_day= !sky_is_day;
      if (sky_is_day) shader.set("sky",loadImage("content/sky.jpg")); 
      else shader.set("sky",loadImage("content/night_sky.jpg")); 
   }
-  else if (keyCode == 10){ // ENTER ?
+  else if (keyCode == 10){ // ENTER
     take_picture = true ;
     //save("pictures/picture"+picture_n+".jpeg");
     //picture_n++ ;
@@ -167,6 +190,9 @@ void keyPressed(){
   else if (keyCode == 27){ // ESC
     // escape
     exit();
+  }
+  else if (keyCode == 84){ // t
+    println("Time : ",millis()/1000.0);
   }
   else if (keyCode == 32){ // SPACE
     shader = loadShader(file);
