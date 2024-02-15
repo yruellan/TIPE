@@ -13,10 +13,13 @@ Features :
 - Reflexion
 <img src="./pictures/picture39.png" alt="Mirrors" width="400">
 
+- Blur
+<img src="./pictures/picture62.png" alt="Blur" width="400">
+
 - Refraction
 <img src="./pictures/picture54.png" alt="Refraction" width="400">
 
-- Shadow
+- Light & Shadow
 <img src="./pictures/picture40.png" alt="Light" width="400">
 
 - Ray Marching

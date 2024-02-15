@@ -9,8 +9,12 @@ attribute vec4 color;
 attribute vec3 normal;
 
 varying vec4 vertColor;
+varying float Array[10] ;
 
 void main() {
+
+    Array = float[10](1,2,3,4,5,6,7,8,9,10) ;
+
     gl_Position = transform * position;    
     vec3 ecPosition = vec3(modelview * position);  
     vec3 ecNormal = normalize(normalMatrix * normal);
