@@ -66,6 +66,7 @@ uniform int draw_type ;
 #define TYPE_RECTANGLE 4
 #define TYPE_CIRCLE 5
 #define TYPE_TRIANGLE 6
+#define TYPE_MANDELBULB 7
 
 #define STRUCT_NULL -1
 #define STRUCT_LIST 0
@@ -73,7 +74,8 @@ uniform int draw_type ;
 #define STRUCT_CYLINDER 2
 #define STRUCT_UNION 3
 #define STRUCT_INTERSECTION 4
-#define STRUCT_SMOOTH_INTER 5
+#define STRUCT_SMOOTH_U 5
+#define STRUCT_CROPPED 6
 
 // Structure definitions
 struct Line {
@@ -109,8 +111,9 @@ struct Object {
     float refrac ;
     bool is_light ;
 };
+#define GROUP_SIZE 10
 struct Group {
-    Object objects[10] ;
+    Object objects[GROUP_SIZE] ;
     int nb_objects ;
     int type ;
 };
@@ -177,6 +180,15 @@ Object new_typed_Plan(Plane P, vec3 color, float mirror, int type){
     return O;
 }
 
+Object new_Bulb(vec3 pos, vec3 color, float mirror){
+    Object O = null_Object();
+    O.sphere = Sphere(pos,0);
+    O.type = TYPE_MANDELBULB;
+    O.color = color;
+    O.mirror = mirror;
+    return O;
+}
+
 
 Object Refractor(Object O, float refrac){
     O.refrac = refrac;
@@ -239,6 +251,14 @@ Group Full_Cylinder(Cylinder C, vec3 col, float mirror){
 ////////////////////////////////////////////////////////////////////////
 
 #define nb_object 15
+
+// Idea :
+// List of objects
+// List of links
+// obj : [0,1,2,3,4,5]
+// links : [union 0 1, inter 2 3 , ...]
+// Calc : [o0, o1, o2, o3, o4, o5, union 0 1, inter 7 2, ...]
+// Calc : Array[3*n]
 
 Object objects[nb_object] = Object[nb_object](
     null_Object(),
@@ -307,19 +327,19 @@ void init_objects(){
     if (scene == 1){
         push_object(Light(new_Object(
             Sphere(vec3(0,light_height/2.5,0),1.2),
-            // COLOR_SUN,
-            vec3(1.0, 0.8157, 0.0),
+            COLOR_SUN,
+            // vec3(1.0, 0.8157, 0.0),
             0.0
         )));
         push_object(new_Rectangle(
             Plane(vec3(-5,1,5),vec3(10,0,0),vec3(0,6,0)),
             COLOR_GALAXY, 0.0
         ));
-        push_object(new_Object(Sphere(vec3(-2,1.5,0),1),vec3(0.0, 1.0, 0.702),0.0));
-        push_object(new_Object(Sphere(vec3(2.5,3.5,-1),.4),vec3(0.6588, 0.0706, 0.6392),0.0));
+        // push_object(new_Object(Sphere(vec3(-2,1.5,0),1),vec3(0.0, 1.0, 0.702),0.0));
+        // push_object(new_Object(Sphere(vec3(2.5,3.5,-1),.4),vec3(0.6588, 0.0706, 0.6392),0.0));
 
-        // push_object(new_Object(Sphere(vec3(-2,1.5,0),1),COLOR_EARTH,0.0));
-        // push_object(new_Object(Sphere(vec3(2.5,3.5,-1),.4),COLOR_MOON,0.0));
+        push_object(new_Object(Sphere(vec3(-2,1.5,0),1),COLOR_EARTH,0.0));
+        push_object(new_Object(Sphere(vec3(2.5,3.5,-1),.4),COLOR_MOON,0.0));
         
         // push_object(new_Object(Cylinder(vec3(-4,1,3),vec3(2,3,-1),2),COLOR_SAGITTARIUS,0));
         // push_object(new_Object(Cylinder(vec3(0,0,0),vec3(0,1.01,0),1),COLOR_SKY,0));
@@ -357,8 +377,9 @@ void init_objects(){
 
     // Scene 4 : A sphere
     if (scene == 4){
+        push_object(new_Bulb(vec3(-1,1,0),vec3(1),0)) ;
         vec3 col = vec3(0.3333, 0.7176, 0.5294);
-        push_object(new_Object(Sphere(vec3(0,light_height,0),1.5),col,0.0));
+        push_object(new_Object(Sphere(vec3(2,light_height,0),1.5),col,0.0));
     }
 
     // Scene 5 : A cube and intersection for ray marching
@@ -367,12 +388,47 @@ void init_objects(){
         push_cube(vec3(-2,1,0),vec3(2,0,0),vec3(0,2,0),vec3(0,0,2),col,0.2);
         push_object(new_Rectangle(
            Plane(vec3(-7.5,0,7),vec3(15,0,0),vec3(0,10,0)),
-           vec3(0.0588, 0.4392, 0.0627),0
+           vec3(0.9569, 0.6627, 0.251),.5
         ));
         push_full_cylinder(
             Cylinder(vec3(4,1,1),vec3(-2,0,10),.5),
             vec3(0.0, 0.7, 1.0),.2
         );
+    }
+
+    // Scene 6 : A room
+    if (scene == 6){
+        
+        float z = 10 ;
+        float dy = 10 ;
+        float dx = 15 ;
+        float dz = -10 ;
+
+        push_object(new_Rectangle( // ahead
+           Plane(vec3(-dx/2,0,z),vec3(dx,0,0),vec3(0,dy,0)),
+           vec3(1.0, 0.0, 0.0),1
+        ));
+        push_object(new_Rectangle( // 
+           Plane(vec3(-dx/2,0,z+dz),vec3(dx,0,0),vec3(0,dy,0)),
+           vec3(1.0, 0.0, 0.0),1
+        ));
+
+        push_object(new_Rectangle( // top
+           Plane(vec3(-dx/2,dy,z),vec3(dx,0,0),vec3(0,0,dz)),
+           vec3(0.5, 0.5, 0.5),.0
+        ));
+
+        push_object(new_Rectangle( // left
+           Plane(vec3(-dx/2,0,z),vec3(0,0,dz),vec3(0,dy,0)),
+           vec3(1.0, 1.0, 0.0),0
+        ));
+        push_object(new_Rectangle( // right
+           Plane(vec3(dx/2,0,z),vec3(0,0,dz),vec3(0,dy,0)),
+           vec3(0.0, 0.0, 1.0),0
+        ));
+
+        push_object(new_Object(Sphere(vec3(5,2,z-4),1.5),vec3(0,1,0),0.6));
+        push_object(new_Object(Cylinder(vec3(-4,1,z-5),vec3(2,7,-2),.5),vec3(0.0, 0.7, 1.0),0.5));
     }
 
     // Floor :
@@ -439,6 +495,18 @@ float smooth_min(float a, float b){
     float k = 0.02 ;
     float h = a-b;
     return 0.5*( (a+b) - sqrt(h*h+k) );
+}
+
+float random(float x){
+    return fract(sin(x)*10000.0) ;
+}
+
+vec3 random3(float x){
+    return 2*vec3(
+        random(x*34.4938+836.9372),
+        random(x*02.3847+972.3085),
+        random(x*82.2984+184.3234)
+    ) - vec3(1) ;
 }
 
 
@@ -554,19 +622,51 @@ vec2 taux_ref(vec3 u, vec3 v_t, vec3 n, float r){
 
 ////////////////////////////////////////////////////////////////////////
 
-float distance(vec3 P, Sphere S){
+float MandelbulbSDF(vec3 pos, float pow_, const int max_itr) {
+    // https://editor.p5js.org/Taxen99/sketches/47CDg5-nV
+
+    vec3 zeta = pos; 
+    float dr = 1.0; // magic variable
+    float r = 0.0; // the radius
+    float theta ;
+    float phi ;
+
+    for (int n = 0; n > -1; n++) {
+        if (n > max_itr) break;
+        // vec3 v = zeta ;
+        r = norm(zeta) ;
+        theta = atan(sqrt(dot(zeta.xy,zeta.xy)), zeta.z);
+        phi = atan(zeta.y, zeta.x);
+
+        if (r > 2.0) break;
+
+        dr = pow(r, pow_ - 1.0) * pow_ * dr + 1.0; // magic formula
+
+        vec3 powered ;
+        powered.x = pow(r, pow_) * sin(theta * pow_) * cos(phi * pow_);
+        powered.y = pow(r, pow_) * sin(theta * pow_) * sin(phi * pow_);
+        powered.z = pow(r, pow_) * cos(theta * pow_);
+        // raise everything to the power of pow_
+
+        zeta = powered + pos;
+    }
+
+    return 0.5 * log(r) * r / dr; // more magic to compute distance
+}
+
+float SDF(vec3 P, Sphere S){
     return dist(P, S.center) - S.radius ;
 }
 
-float distance(vec3 P, Line L){
+float SDF(vec3 P, Line L){
     vec3 P2 = projection(L,P);
-    float a = distance(P2,L.origin) ;
+    float a = dist(P2,L.origin) ;
     if (a < 0) return dist(L.origin,P) ;
     if (a > norm(L.v)) return dist(L.origin+L.v,P) ;
     return dist(P,P2) ;
 }
 
-float distance(vec3 P, Cylinder C){
+float SDF(vec3 P, Cylinder C){
     vec3 P2 = projection(Line(C.origin,C.v), P) ;
 
     float h = dist(P2, C.origin) ;
@@ -579,7 +679,7 @@ float distance(vec3 P, Cylinder C){
     return dist(P,P3) ; 
 }
 
-float distance(vec3 P, Plane T, int type){
+float SDF(vec3 P, Plane T, int type){
     vec3 pos = locals_cord(P-T.origin,T.u1,T.u2) ;
     float a = pos.x / pos.z ;
     float b = pos.y / pos.z ;
@@ -618,20 +718,38 @@ float distance(vec3 P, Plane T, int type){
     return dist(P,P2) ;
 }
 
-float distance(Line L, Object O){
+float SDF(Line L, Object O){
     vec3 P = L.origin ;
     if (O.type == TYPE_ERROR) return -1.;
-    if (O.type == TYPE_SPHERE) return distance(P, O.sphere);
-    if (O.type == TYPE_CYLINDER) return distance(P, O.cylinder);
-    return distance(P, O.plane, O.type);
+    if (O.type == TYPE_SPHERE) return SDF(P, O.sphere);
+    if (O.type == TYPE_CYLINDER) return SDF(P, O.cylinder);
+    if (O.type == TYPE_MANDELBULB) return MandelbulbSDF(P-O.sphere.center, 5.0,30);
+    return SDF(P, O.plane, O.type);
 }
 
-Object distance(Line Ray){
+float SDF(Line L, Group G){
+    float min_dist = -1. ;
+    for (int j = 0 ; j < G.nb_objects ; j++){
+        float dist_j = SDF(L, G.objects[j]) ;
+        if ( dist_j < 0 ) continue ;
+        if (min_dist == -1.0){
+            min_dist = dist_j ;
+        } else {
+            if (G.type == STRUCT_UNION) min_dist = min(min_dist, dist_j) ;
+            if (G.type == STRUCT_SMOOTH_U) min_dist = smooth_min(min_dist, dist_j) ;
+            if (G.type == STRUCT_INTERSECTION) min_dist = max(min_dist, dist_j) ;
+        }
+    }
+    return min_dist ;
+}
+
+Object SDF(Line Ray){
     float min_dist = -1. ;
     Object best_obj ;
+    
 
     for (int j = 0 ; j < nb_object ; j++){
-        float dist_j = distance(Ray, objects[j]) ;
+        float dist_j = SDF(Ray, objects[j]) ;
         if ( dist_j < 0 ) continue ;
         if (min_dist == -1.){
             min_dist = dist_j ;
@@ -769,6 +887,7 @@ Line get_intersection(Line L, Object O){
     if (O.type == TYPE_ERROR) return Line(vec3(0.),vec3(0.));
     if (O.type == TYPE_SPHERE) return get_intersection(L, O.sphere);
     if (O.type == TYPE_CYLINDER) return get_intersection(L, O.cylinder);
+    if (O.type == TYPE_MANDELBULB) return get_intersection(L, Sphere(O.sphere.center,.3));
     return get_intersection(L, O.plane, O.type);
 }
 
@@ -781,7 +900,7 @@ Object get_intersection(Line Ray){
         float dist = dot(Intersection.origin - Ray.origin,Intersection.origin - Ray.origin);
         if (
             Intersection.v != vec3(0.) && 
-            abs(dist) > 0.1  &&
+            abs(dist) > 0.001  &&
             ( min_len == -1. || dist < min_len )
         ){
             min_len = dist ;
@@ -921,19 +1040,19 @@ vec4 calc_color(Object Obj, Line Normal){
     return vec4(col,n_col);
 }
 
-vec3 draw(Line Ray, const int n_reflection){
-    vec3 col = vec3(0.);
-    float n_col = 0; // replace with vec4
+#define NB_ITER 10
+
+vec3 draw(Line Ray){
+    vec4 col = vec4(0.);
     float col_weight = 1;
 
-    for (int i = 0; i < n_reflection; i++){
+    for (int i=0 ; i<NB_ITER ; i++){
 
         Object best_obj = get_intersection(Ray);
 
         if (best_obj.type == TYPE_ERROR){
-            if (light_type == 2) col += col_weight * vec3(0.0) ;
-            else col += col_weight * vec3(0.0, 0.0, 0.3) ;
-            n_col += col_weight ;
+            if (light_type == 2) col += col_weight * vec4(0,0,0,1) ;
+            else col += col_weight * vec4(0.0, 0.0, 0.3,1) ;
             break ;
         }
 
@@ -942,13 +1061,11 @@ vec3 draw(Line Ray, const int n_reflection){
         vec4 res = calc_color(best_obj, N );
         
         if ( res.w == -1.0) { // The object is light
-            col += col_weight * res.xyz;
-            n_col += col_weight;
+            col += col_weight * vec4(res.xyz,1);
             break ;
         }
 
-        col += col_weight * res.w * res.xyz ;
-        n_col += col_weight * res.w ;
+        col += col_weight * res.w * vec4(res.xyz,1) ;
         col_weight *= best_obj.mirror ;
 
         if (col_weight == 0) break ;
@@ -972,21 +1089,18 @@ vec3 draw(Line Ray, const int n_reflection){
         // iter loop for calc reflexion or refraction
     }
 
-    return col / n_col ;
+    return col.rgb / col.w ;
 }
 
+vec3 draw2(Line Ray){
 
-vec3 draw2(Line Ray, const int n_rays_){
-    
-    const int n_rays = 8;
-
-    Line Rays[n_rays] ;
-    vec3 cols[n_rays] ;
-    float coeffs[n_rays] ;
-    bool is_init[n_rays] ;
+    Line Rays[NB_ITER] ;
+    vec3 cols[NB_ITER] ;
+    float coeffs[NB_ITER] ;
+    bool is_init[NB_ITER] ;
 
     // Init Array
-    for (int i = 0; i < n_rays; i++){
+    for (int i = 0; i < NB_ITER; i++){
         Rays[i] = Line(vec3(0),vec3(0)) ;
         cols[i] = vec3(0) ;
         coeffs[i] = 1 ;
@@ -1000,7 +1114,7 @@ vec3 draw2(Line Ray, const int n_rays_){
     n++ ;
 
 
-    for (int i = 0; i < n_rays; i++){
+    for (int i = 0; i < NB_ITER; i++){
 
         // if (i>light_height) break ;
         if (! is_init[i]) break ;
@@ -1026,7 +1140,7 @@ vec3 draw2(Line Ray, const int n_rays_){
         }
         cols[i] = res.rgb ;
         // *0 + vec3(0.0, 0.5176, 1.0)
-        if ( n-2< n_rays && best_obj.refrac != 1){
+        if ( n-2< NB_ITER && best_obj.refrac != 1){
 
             bool is_reverse ;
             if (best_obj.type == TYPE_SPHERE)
@@ -1036,6 +1150,7 @@ vec3 draw2(Line Ray, const int n_rays_){
             // else if (best_obj.type == 1) is_reverse = dot(N.origin - best_obj.cylinder.origin,Ray.v) > 0.0 ;
             else is_reverse = dot(cross(best_obj.plane.u1,best_obj.plane.u2),Ray.v) > 0 ;
             float r = is_reverse ? 1/best_obj.refrac : best_obj.refrac ;
+            r = abs(r) ;
 
             Rays[n].v = refraction(Rays[i].v,N.v,r);        // Refraction
             Rays[n].origin = N.origin ;
@@ -1050,8 +1165,9 @@ vec3 draw2(Line Ray, const int n_rays_){
             is_init[n] = true ;
             n++ ;
 
-        } else if (best_obj.mirror != 0.0 && n<n_rays) {
+        } else if (best_obj.mirror != 0.0 && n<NB_ITER) {
             Rays[n].v = reflexion(Rays[i].v,N.v);
+            Rays[n].v += random3(dot(Rays[i].v,vec3(3.4837,-2.4863,9.3874))) * 0.1;
             Rays[n].origin = N.origin ;
             coeffs[n] = coeffs[i] * best_obj.mirror;
             is_init[n] = true ;
@@ -1064,41 +1180,40 @@ vec3 draw2(Line Ray, const int n_rays_){
     float sum_coeffs = 0 ;
     int nb_init = 0 ;
 
-    for (int i = 0; i < n_rays; i++){
+    for (int i = 0; i < NB_ITER; i++){
         if (is_init[i]){
-            col += cols[i] + 0* coeffs[i] ; 
-            // sum_coeffs += coeffs[i] ;
-            sum_coeffs += 1 ;
+            col += cols[i] * coeffs[i] ; 
+            sum_coeffs += coeffs[i] ;
+            // sum_coeffs += 1 ;
             nb_init += 1 ;
         }
     }
     
-    if (nb_init == 0) return vec3(0.8039, 0.149, 0.7686) ;
+    if (sum_coeffs == 0) return vec3(0.8039, 0.149, 0.7686) ;
     return col / sum_coeffs ;
 }
 
 vec3 draw3(Line Ray){
     vec4 col = vec4(0);
     
-
-    const int nb_rec = 20;
     float dist = 0.0 ;
 
-    for (int i = 0 ; i < nb_rec ; i++){
-        Object best_obj = distance(Ray);
+    for (int i = 0 ; i < NB_ITER ; i++){
+        Object best_obj = SDF(Ray);
 
-        float D = (best_obj.type == TYPE_ERROR) ? -1 : distance(Ray,best_obj); 
+        float D = (best_obj.type == TYPE_ERROR) ? -1 : SDF(Ray,best_obj); 
 
         vec3 obj_col = calc_color(best_obj,Line(Ray.origin,vec3(0))).rgb ;
         // vec3 obj_col = best_obj.color ;
 
         if (abs(D) < .01){
-            float dist_max = 30 ;
-            float alpha_max = 0.5 ;
-            float alpha = dist > dist_max ? 1 : (1 - pow(1-dist/dist_max,2)) ;
-            col += vec4(0.0, 0.0, 0.0, alpha_max*alpha) ;
+            // float dist_max = 30 ;
+            // float alpha_max = 0.5 ;
+            // float alpha = dist > dist_max ? 1 : (1 - pow(1-dist/dist_max,2)) ;
+            // col += vec4(0.0, 0.0, 0.0, alpha_max*alpha) ;
             col += vec4(obj_col,1) ;
             break ;
+            // return col.rgb / col.w ;
         }
         // col += vec4(obj_col,1) * exp(-D/10) ;
         // col += vec4(obj_col,1) * exp(-D*D/25) ;
@@ -1107,8 +1222,7 @@ vec3 draw3(Line Ray){
         if (D < 0) return vec3(.5,.5,.5) ;
         if (D > 100){ // show sky
             col += vec4(0.0, 0.0, 0.3,10);
-            col /= col.w ;
-            return col.rgb ;
+            return col.rgb / col.w ;
             return vec3(0.0, 0.0, 0.3);
             // if (light_type == 2) cols[i] =  vec3(0.0) ;
             // else {
@@ -1121,15 +1235,12 @@ vec3 draw3(Line Ray){
         Ray.origin += D * Ray.v ;
         dist += D ;
     }
-    col /= col.w ;
-    return col.rgb ;
-    return vec3(1.0, 0.0, 0.0) ;
+    return (col.w==0) ? vec3(1.0, 0.0, 0.9) : col.rgb / col.w;
 }
 
 void main() {
     float size = max(u_resolution.x,u_resolution.y);
     vec2 st =  1.0 * (gl_FragCoord.xy / vec2(size,size) - .5);
-    const int n_rays = 4 ;
 
     init_objects();
 
@@ -1143,8 +1254,8 @@ void main() {
         normalize(M * B)
     );
     vec3 col ;
-    if      (draw_type == 0) col = draw(Ray,1) ;
-    else if (draw_type == 1) col = draw2(Ray,n_rays) ;
+    if      (draw_type == 0) col = draw(Ray) ;
+    else if (draw_type == 1) col = draw2(Ray) ;
     else if (draw_type == 2) col = draw3(Ray);
     else col = vec3(0.8039, 0.149, 0.7686) ;
     
