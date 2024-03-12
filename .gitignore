@@ -1,7 +1,14 @@
 **/.DS_Store
-.shader.glsl.swp
+**/.vscode/
+**.swp
 diapo/*
 other/*
 ggb/*
 Tests/*
+Examples/*
+
 C/*
+Cpp/Build/*
+Cpp/main
+Cpp/include/*
+
