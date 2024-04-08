@@ -18,6 +18,7 @@
 // https://www.shadertoy.com/view/4ttSWf Rainforest
 // https://www.shadertoy.com/view/3dGSWR FBM Terrain
 
+// https://www.youtube.com/watch?v=BFld4EBO2RE Video Painting a Landscape with Maths (IQ)
 
 
 // #ifdef GL_ES
@@ -55,6 +56,7 @@ uniform int variable;
 #define TYPE_CIRCLE 5
 #define TYPE_TRIANGLE 6
 #define TYPE_MANDELBULB 7
+#define TYPE_TERRAIN 8
 
 
 #define STRUCT_NULL -1
@@ -174,6 +176,12 @@ Object new_Bulb(vec3 pos, vec3 color, float mirror){
     return O;
 }
 
+Object new_terrain(){
+    Object O = null_Object();
+    O.type = TYPE_TERRAIN;
+    O.color = vec3(0.0, 0.5, 0.0);
+    return O;
+}
 
 Object Refractor(Object O, float refrac){
     O.refrac = refrac;
@@ -367,6 +375,12 @@ void init_objects(){
 
         push_object(new_Object(Sphere(vec3(5,2,z-4),1.5),vec3(0,1,0),0.6));
         push_object(new_Object(Cylinder(vec3(-4,1,z-5),vec3(2,7,-2),.5),vec3(0.0, 0.7, 1.0),0.5));
+    }
+
+    // Scene 0 : A terrain
+    if (scene == 0){
+        push_object(new_terrain());
+        return ;
     }
 
     // Floor :
@@ -656,12 +670,18 @@ float SDF(vec3 P, Plane T, int type){
     return dist(P,P2) ;
 }
 
-float SDF(Line L, Object O){
-    vec3 P = L.origin ;
+float SDFTerrain(vec3 P){
+    vec2 pos = P.xz ;
+    return P.y - 0.0 + sin(10*pos.x) * cos(5*pos.y) * 0.5 ;
+}
+
+float SDF(Line Ray, Object O){
+    vec3 P = Ray.origin ;
     if (O.type == TYPE_ERROR) return -1.;
     if (O.type == TYPE_SPHERE) return SDF(P, O.sphere);
     if (O.type == TYPE_CYLINDER) return SDF(P, O.cylinder);
     if (O.type == TYPE_MANDELBULB) return MandelbulbSDF(P-O.sphere.center, 5.0,30);
+    if (O.type == TYPE_TERRAIN) return SDFTerrain(Ray.origin);
     return SDF(P, O.plane, O.type);
 }
 

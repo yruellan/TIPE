@@ -1,11 +1,13 @@
 PShader shader;
-String file = "raymarch.glsl";
+String file = "terrain.glsl";
+String file_ex = "example.glsl";
 
 float x,y ;
 float angleX, angleY ;
 
-int scene = 1 ;
+int scene = 0 ;
 boolean bases_vectors = false ; 
+boolean show_example = false ;
 int variable = 0 ;
 
 int picture_n ;
@@ -21,6 +23,8 @@ void setup() {
   shader = loadShader(file);
   
   frameRate(30);
+  
+
   
   x = 0.0 ;
   y = -5.0 ;
@@ -79,7 +83,7 @@ void draw() {
   float t0 = millis();
   rect(0,0,width,height);
   float t1 = millis();
-  println("Scene Drawed (",(t1-t0)/1000.0,"s)");
+  println("Scene",scene,"Drawed (",(t1-t0)/1000.0,"s)");
   
 }
 
@@ -101,7 +105,7 @@ void keyPressed(){
     shader.set("position", x,y);
   }
   else if (key == 'z' || key == 'q' ||key == 's' ||key == 'd'){
-    float dtheta = 10 ;
+    float dtheta = 20 ;
     if      (key == 'z'){ angleY -= dtheta;}
     else if (key == 'q'){ angleX -= dtheta;}
     else if (key == 's'){ angleY += dtheta;}
@@ -124,6 +128,13 @@ void keyPressed(){
     shader.set("variable", variable);
   }
   
+  else if (keyCode == 92){ // `£
+    show_example = !show_example ;
+    println("show example :",show_example);
+    if (show_example) shader = loadShader(file_ex);
+    else shader = loadShader(file);
+    reload_shader = true ;
+  }
   else if (keyCode == 49){ // 1&
     scene = 1 ;
     shader.set("scene",scene);
