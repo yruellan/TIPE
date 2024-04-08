@@ -134,24 +134,12 @@ void keyPressed(){
     shader.set("u_mouse", width/2.0+angleX, height/2.0+angleY);
   }
   
-  else if (keyCode == 64){ // @
+  else if (key == '@'){
     bases_vectors = !bases_vectors ;
     shader.set("bases_vectors",bases_vectors);
   }
-  else if (keyCode == 49){ // 1&
-    scene = 1 ;
-    shader.set("scene",scene);
-  }
-  else if (keyCode == 50){ // 2é
-    scene = 2 ;
-    shader.set("scene",scene);
-  }
-  else if (keyCode == 51){ // 3"
-    scene = 3 ;
-    shader.set("scene",scene);
-  }
-  else if (keyCode == 52){ // 4'
-    scene = 4 ;
+  else if ('1' <= key && key <= '9'){
+    scene = key - '1' ;
     shader.set("scene",scene);
   }
   else if (key == 'l'){
