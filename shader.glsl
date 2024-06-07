@@ -38,6 +38,13 @@ uniform float light_height;
 uniform int light_type; // 0: no light, 1: light+ambiente, 2: only light
 uniform int draw_type ;
 
+////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                            CONSTANT.glsl                           //
+//                                                                    //
+//                         Defining constants                         //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
 #define PI 3.1415926535897932384626433832795
 #define TWO_PI 6.283185307179586476925286766559
@@ -119,7 +126,14 @@ struct Group {
 };
 
 ////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                       ObjectsInitializer.glsl                      //
+//                                                                    //
+//                 Functions for initialize an object                 //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
+// Initialize an void object
 Object null_Object(){
     return Object(
         Sphere(vec3(0.),0.),                      // sphere
@@ -133,6 +147,7 @@ Object null_Object(){
     ) ;
 }
 
+// Initialize a sphere
 Object new_Object(Sphere S, vec3 color, float mirror){
     Object O = null_Object();
     O.sphere = S;
@@ -142,6 +157,7 @@ Object new_Object(Sphere S, vec3 color, float mirror){
     return O;
 }
 
+// Initialize a cylinder
 Object new_Object(Cylinder C, vec3 color, float mirror){
     Object O = null_Object();
     O.cylinder = C;
@@ -151,6 +167,7 @@ Object new_Object(Cylinder C, vec3 color, float mirror){
     return O;
 }
 
+// Initialize a plane
 Object new_Object(Plane P, vec3 color, float mirror){
     Object O = null_Object();
     O.plane = P;
@@ -159,27 +176,32 @@ Object new_Object(Plane P, vec3 color, float mirror){
     O.mirror = mirror;
     return O;
 }
+
+// Initialize a rectangle
 Object new_Rectangle(Plane P, vec3 color, float mirror){
     Object O = new_Object(P, color, mirror);
     O.type = TYPE_RECTANGLE;
     return O;
 }
+// Initialize a plane mirror
 Object new_Plane(Plane P, vec3 color, float mirror){
     Object O = new_Object(P, color, mirror);
     O.type = TYPE_PLANE;
     return O;
 }
+// Initialize a circle / ellipse 
 Object new_Circle(Plane P, vec3 color, float mirror){
     Object O = new_Object(P, color, mirror);
     O.type = TYPE_CIRCLE;
     return O;
 }
+// Initialize a plan and its type of rendering
 Object new_typed_Plan(Plane P, vec3 color, float mirror, int type){
     Object O = new_Object(P, color, mirror);
     O.type = type;
     return O;
 }
-
+// Initialize a mandelbulb 
 Object new_Bulb(vec3 pos, vec3 color, float mirror){
     Object O = null_Object();
     O.sphere = Sphere(pos,0);
@@ -189,19 +211,17 @@ Object new_Bulb(vec3 pos, vec3 color, float mirror){
     return O;
 }
 
-
+// set the refraction of a object
 Object Refractor(Object O, float refrac){
     O.refrac = refrac;
     return O;
 }
-
+// add light on an object
 Object Light(Object O){
     O.is_light = true;
     return O ;
 }
 
-float norm2(vec3 v);
-vec3 normalize(vec3 v);
 
 Group null_Group(){
     return Group(
@@ -226,6 +246,10 @@ Group Cube(vec3 pos,vec3 u1,vec3 u2,vec3 u3, vec3 col, float mirror){
     G.objects[5] = new_Rectangle(Plane(pos+u1+u2+u3,-u3,-u1),col,mirror);
     return G;
 }
+
+float norm2(vec3 v);
+vec3 normalize(vec3 v);
+
 Group Full_Cylinder(Cylinder C, vec3 col, float mirror){
     Group G = null_Group();
     G.type = STRUCT_CYLINDER;
@@ -249,6 +273,13 @@ Group Full_Cylinder(Cylinder C, vec3 col, float mirror){
 
 
 ////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                             Scenes.glsl                            //
+//                                                                    //
+//                  Creating the differents scenes                    //
+//                     and placing objects in it                      //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
 #define nb_object 15
 
@@ -260,6 +291,7 @@ Group Full_Cylinder(Cylinder C, vec3 col, float mirror){
 // Calc : [o0, o1, o2, o3, o4, o5, union 0 1, inter 7 2, ...]
 // Calc : Array[3*n]
 
+// The array of all objects to render
 Object objects[nb_object] = Object[nb_object](
     null_Object(),
     null_Object(),
@@ -280,12 +312,14 @@ Object objects[nb_object] = Object[nb_object](
 
 int index_obj = 0 ; 
 
+// Push an object into objects, view as a chained list
 void push_object(Object obj){
     // inout int index_obj, 
     objects[index_obj] = obj ;
     index_obj++ ;
 }
 
+// create and push the six faces of a cube
 void push_cube(vec3 pos,vec3 u1,vec3 u2,vec3 u3, vec3 col, float mirror){
     push_object(new_Rectangle(Plane(pos,u1,u2),col,mirror));
     push_object(new_Rectangle(Plane(pos,u2,u3),col,mirror));
@@ -295,6 +329,7 @@ void push_cube(vec3 pos,vec3 u1,vec3 u2,vec3 u3, vec3 col, float mirror){
     push_object(new_Rectangle(Plane(pos+u1+u2+u3,-u3,-u1),col,mirror));
 }
 
+// create and push a cylinder a his two extremity
 void push_full_cylinder(Cylinder C, vec3 col, float mirror) {
     vec3 v1 = cross(vec3(1,0,0),C.v);
     vec3 v2 = cross(vec3(0,1,0),C.v);
@@ -313,6 +348,7 @@ void push_full_cylinder(Cylinder C, vec3 col, float mirror) {
 
 }
 
+// Initialize the differente scene
 void init_objects(){
 
     // Bases vectors
@@ -326,7 +362,8 @@ void init_objects(){
     // Scene 1 : somes objects
     if (scene == 1){
         push_object(Light(new_Object(
-            Sphere(vec3(0,light_height/2.5,0),1.2),
+            //Sphere(vec3(0,light_height/2.5,0),1.2),
+            Sphere(vec3(0,light_height/2.5,0),.8),
             COLOR_SUN,
             // vec3(1.0, 0.8157, 0.0),
             0.0
@@ -346,19 +383,25 @@ void init_objects(){
     }
     
 
-    // Scene 2 : Mirrors
+    // Scene 2 : Mirrors example
     if (scene == 2){
-        push_object(Light(new_Object(Sphere(vec3(0,4,0),.2),COLOR_SUN,0.0)));
+        push_object(Light(new_Object(Sphere(vec3(0,light_height/2+4,0),.2),COLOR_SUN,0.0)));
         push_object(new_Rectangle(
            Plane(vec3(-7.5,0,7),vec3(15,0,0),vec3(0,10,0)),
-           vec3(0.0, 0.0, 0.0),.9
+           //Plane(vec3(-7.5,0,7),vec3(15,0,0),vec3(0,10,-.5)),
+           vec3(0.0, 0.0, 0.0),.5
         ));
         push_object(new_Object(Sphere(vec3(-2,1.5,0),1),COLOR_EARTH,0.0));
-        push_object(new_Object(Sphere(vec3(2,2.2,1),1.8),vec3(1.0, 0.6, 0.0),.9));
-        push_object(new_Object(Cylinder(vec3(-4,1,1),vec3(2,3,-1),.5),vec3(0.0, 0.7, 1.0),.9));
+        push_object(new_Object(Sphere(vec3(2,2.2,1),1.8),vec3(1.0, 0.6, 0.0),.5));
+        // push_object(new_Object(Cylinder(vec3(-4,1,1),vec3(2,3,-1),.5),vec3(0.0, 0.7, 1.0),.5));
+        push_full_cylinder(
+            Cylinder(vec3(-4,1,1),vec3(2,3,-1),.5),
+            vec3(0.0, 0.7, 1.0),
+            .5
+        )
     }
     
-    // Scene 3 : Refraction
+    // Scene 3 : Refraction example
     if (scene == 3){
 
         // float refrac = light_height / 10.0 - 1. + 0.01 ;
@@ -375,7 +418,7 @@ void init_objects(){
         push_object(new_Object(Cylinder(vec3(-1,1,8),vec3(10,10,-2),.5),vec3(0.0, 0.7, 1.0),0));
     }
 
-    // Scene 4 : A sphere
+    // Scene 4 : A mandelbulb
     if (scene == 4){
         push_object(new_Bulb(vec3(-1,1,0),vec3(1),0)) ;
         vec3 col = vec3(0.3333, 0.7176, 0.5294);
@@ -396,7 +439,7 @@ void init_objects(){
         );
     }
 
-    // Scene 6 : A room
+    // Scene 6 : A room with mirrors walls
     if (scene == 6){
         
         float z = 10 ;
@@ -440,7 +483,12 @@ void init_objects(){
 }
 
 ////////////////////////////////////////////////////////////////////////
-
+//                                                                    //
+//                           Functions.glsl                           //
+//                                                                    //
+//                 Defining some useful math functions                //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
 // 3d Matrix of rotation
 mat3 rot(float t12, float t13, float t23){
@@ -466,6 +514,7 @@ mat3 rot(float t12, float t13, float t23){
     return r1 * r2 * r3;
 }
 
+// Norm squared
 float norm2(vec3 v){
     return dot(v,v);
 }
@@ -482,14 +531,17 @@ float dist(vec3 A, vec3 B){
     return sqrt(dot(A-B,A-B));
 }
 
+// Distance squared
 float dist2(vec3 A, vec3 B){
     return dot(A-B,A-B);
 }
 
+// Projection of the point A on the line L
 vec3 projection(Line L, vec3 A){
     return L.origin + dot(A-L.origin,L.v) * L.v / norm2(L.v) ;
 }
 
+// Smooth minimum of a and b
 float smooth_min(float a, float b){
     // return a < b ? a : b ;
     float k = 0.02 ;
@@ -497,21 +549,27 @@ float smooth_min(float a, float b){
     return 0.5*( (a+b) - sqrt(h*h+k) );
 }
 
+
+// A pseudo-random number between 0 and 1
 float random(float x){
     return fract(sin(x)*10000.0) ;
 }
 
-vec3 random3(float x){
+// A pseudo-random vec3
+vec3 random3(vec3 v){
     return 2*vec3(
-        random(x*34.4938+836.9372),
-        random(x*02.3847+972.3085),
-        random(x*82.2984+184.3234)
+        //random(x*34.4938+836.9372),
+        //random(x*02.3847+972.3085),
+        //random(x*82.2984+184.3234)
+        random(dot(v,vec3(0.1,294.284,-5.4824))+19.9382),
+        random(dot(v,vec3(192.2482,-28.249,94.24))-21.2082),
+        random(dot(v,vec3(-2.192,13.282,20.8294))+294.2972)
     ) - vec3(1) ;
 }
 
 
 
-
+// Get the decomposition of v in the basis (u1,u2)
 vec3 locals_cord(vec3 v, vec3 u1, vec3 u2){
     // return cords of v in local base (u1,u2)
     float a = dot(u2,u2) * dot(v,u1) - dot(u1,u2) * dot(v,u2);
@@ -520,21 +578,29 @@ vec3 locals_cord(vec3 v, vec3 u1, vec3 u2){
     return vec3(a,b,k) ;
 }
 
+// Return the spherical coordinate for a normed vector
 vec2 spherical_cord(vec3 u){
     vec3 v = normalize(u) ;
     float angle = atan(v.z,v.x) / TWO_PI ;
     if (angle < 0) angle += 1 ;
 
     return vec2(angle, (1-v.y)/2 ) ;
+    // angles in the range [-1,1]
 }
 
-
+////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                            Optical.glsl                            //
+//                                                                    //
+//                      Implementing Snell's laws                     //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
 // Return the reflexion of v with respect to the normal n
 vec3 reflexion(vec3 v, vec3 n){
     return v - 2.0 * dot(v,n) * n / dot(n,n) ;
 }
-
+// 
 vec3 refraction(vec3 v_, vec3 n, float r){
     ///////////////////
     //  r = n1 / n2  //
@@ -621,6 +687,12 @@ vec2 taux_ref(vec3 u, vec3 v_t, vec3 n, float r){
 }
 
 ////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                              SDF.glsl                              //
+//                                                                    //
+//                   Defining SDF for all primitives                  //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
 float MandelbulbSDF(vec3 pos, float pow_, const int max_itr) {
     // https://editor.p5js.org/Taxen99/sketches/47CDg5-nV
@@ -653,6 +725,7 @@ float MandelbulbSDF(vec3 pos, float pow_, const int max_itr) {
 
     return 0.5 * log(r) * r / dr; // more magic to compute distance
 }
+
 
 float SDF(vec3 P, Sphere S){
     return dist(P, S.center) - S.radius ;
@@ -762,6 +835,13 @@ Object SDF(Line Ray){
     return min_dist == -1 ? null_Object() : best_obj ;
 }
 
+////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                         Intersections.glsl                         //
+//                                                                    //
+//                   Calculating the intersections                    //
+//                 between a light ray and an object                  //
+//                                                                    //
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -912,6 +992,13 @@ Object get_intersection(Line Ray){
 
 
 ////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                             Color.glsl                             //
+//                                                                    //
+//                  Calculating the color of a point                  //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
+
 
 vec3 img_color(sampler2D img, Object Obj, Line Normal){
 
@@ -964,7 +1051,7 @@ vec4 calc_color(Object Obj, Line Normal){
 
     } else if ( Obj.color == COLOR_GROUND) {
         vec2 pos = fract(Normal.origin.xz / 10) ;
-        if (draw_type == 2) obj_col = vec3(1,0,0) ;
+        if (draw_type == 2 && false) obj_col = vec3(1,0,0) ;
         else obj_col = texture2D(ground,pos).rgb ;
     } else if ( Obj.color == COLOR_LATTICE_1) {
         obj_col = lattice_color(Normal.origin.xz,vec3(0.25),vec3(0.75)) ;
@@ -1012,6 +1099,7 @@ vec4 calc_color(Object Obj, Line Normal){
                 float angle = dot(normalize(Normal.v),normalize(light_dir));
                 angle = clamp(angle,0.,1.);
                 float dist = sqrt(norm2(light_dir));
+                // float dist = norm2(light_dir);
                 float coef ;
                 coef = angle * 5 / (2.0 + dist) ;
                 
@@ -1040,7 +1128,16 @@ vec4 calc_color(Object Obj, Line Normal){
     return vec4(col,n_col);
 }
 
-#define NB_ITER 10
+////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                            Rendering.glsl                          //
+//                                                                    //
+//                          Render the scene                          //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
+
+#define NB_ITER 6
+#define NB_ITER_3 15
 
 vec3 draw(Line Ray){
     vec4 col = vec4(0.);
@@ -1167,7 +1264,7 @@ vec3 draw2(Line Ray){
 
         } else if (best_obj.mirror != 0.0 && n<NB_ITER) {
             Rays[n].v = reflexion(Rays[i].v,N.v);
-            Rays[n].v += random3(dot(Rays[i].v,vec3(3.4837,-2.4863,9.3874))) * 0.1;
+            Rays[n].v += random3(Rays[i].v) * 0.0;
             Rays[n].origin = N.origin ;
             coeffs[n] = coeffs[i] * best_obj.mirror;
             is_init[n] = true ;
@@ -1197,16 +1294,19 @@ vec3 draw3(Line Ray){
     vec4 col = vec4(0);
     
     float dist = 0.0 ;
+    
+    Object best_obj;
+    vec3 obj_col;
 
-    for (int i = 0 ; i < NB_ITER ; i++){
-        Object best_obj = SDF(Ray);
+    for (int i = 0 ; i < NB_ITER_3 ; i++){
+        best_obj = SDF(Ray);
 
         float D = (best_obj.type == TYPE_ERROR) ? -1 : SDF(Ray,best_obj); 
 
-        vec3 obj_col = calc_color(best_obj,Line(Ray.origin,vec3(0))).rgb ;
-        // vec3 obj_col = best_obj.color ;
+        obj_col = calc_color(best_obj,Line(Ray.origin,vec3(0))).rgb ;
+        // obj_col = best_obj.color ;
 
-        if (abs(D) < .01){
+        if (abs(D) < .1){
             // float dist_max = 30 ;
             // float alpha_max = 0.5 ;
             // float alpha = dist > dist_max ? 1 : (1 - pow(1-dist/dist_max,2)) ;
@@ -1219,11 +1319,11 @@ vec3 draw3(Line Ray){
         // col += vec4(obj_col,1) * exp(-D*D/25) ;
         // col += vec4(1.0, 1.0, 1.0, 1.0) * exp(-D*D/40) ;
 
-        if (D < 0) return vec3(.5,.5,.5) ;
-        if (D > 100){ // show sky
+        if (D < 0) return vec3(.5,.5,.5) ; // Inside something
+        if (D > 20){ // show sky
             col += vec4(0.0, 0.0, 0.3,10);
-            return col.rgb / col.w ;
             return vec3(0.0, 0.0, 0.3);
+            return col.rgb / col.w ;
             // if (light_type == 2) cols[i] =  vec3(0.0) ;
             // else {
             //     vec2 v = spherical_cord(Rays[i].v + vec3(0,.1,0)) ;
@@ -1235,8 +1335,21 @@ vec3 draw3(Line Ray){
         Ray.origin += D * Ray.v ;
         dist += D ;
     }
-    return (col.w==0) ? vec3(1.0, 0.0, 0.9) : col.rgb / col.w;
+    
+    // Do I intersect something ?
+    vec3 base_color = vec3(1.0, 0.0, 0.9) ;
+    //vec3 base_color = obj_col ;
+    return (col.w==0) ? base_color : col.rgb / col.w;
 }
+
+////////////////////////////////////////////////////////////////////////
+//                                                                    //
+//                              main.glsl                             //
+//                                                                    //
+//                     Caculate the position and                      //
+//                  orientation to render the scene                   //
+//                                                                    //
+////////////////////////////////////////////////////////////////////////
 
 void main() {
     float size = max(u_resolution.x,u_resolution.y);

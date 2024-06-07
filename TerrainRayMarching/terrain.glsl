@@ -201,7 +201,8 @@ vec3 draw(Line Ray){
     }
 
     vec3 col = vec3(r);
-    col.r = clamp(0,1, dot(sun_dir, normal)) * (1-r);
+    col.r = clamp(0,1, dot(sun_dir, normal)) * (1-r)/2;
+    col.g = clamp(0,1, dot(sun_dir, normal)) * (1-r)/2;
     // col = (.5+.5*shadow(vec3(p.x,h,p.y), sun_dir)) * col ;
 
     float k = 0;
